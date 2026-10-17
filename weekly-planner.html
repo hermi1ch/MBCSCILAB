@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>實驗室週程表</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --gray: #d9d9d9;
+    --line: #7f7f7f;
+    --ink: #1a1a1a;
+    --paper: #ffffff;
+    --bg: #e7e9ee;
+    --accent: #1e4d8c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: Calibri, "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #f7f8fa;
+    border-bottom: 1px solid #d0d5dd;
+    padding: 14px 18px 12px;
+  }
+  .toolbar h1 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .toolbar h1 span {
+    font-weight: 400;
+    color: #667085;
+    font-size: 13px;
+    margin-left: 8px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+  }
+  .row + .row { margin-top: 8px; }
+  label.file {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: white;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  label.file input { display: none; }
+  button, select, input[type="date"] {
+    font: inherit;
+    border: 1px solid #c5cad3;
+    background: white;
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: var(--ink);
+  }
+  button {
+    cursor: pointer;
+    font-weight: 700;
+  }
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+  }
+  .meta { color: #475467; font-size: 13px; }
+  .drop {
+    margin-top: 8px;
+    border: 1.5px dashed #98a2b3;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #475467;
+    background: white;
+    font-size: 14px;
+  }
+  .drop.over { border-color: var(--accent); background: #eef4ff; }
+  details { font-size: 14px; }
+  details summary { cursor: pointer; font-weight: 700; }
+  .map {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 8px;
+  }
+  .map label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #475467; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid #d0d5dd;
+    background: white;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .chip.on { background: #1e4d8c; color: white; border-color: #1e4d8c; }
+  .wrap { padding: 18px; }
+  .sheet-scroll { overflow-x: auto; }
+  .sheet {
+    background: var(--paper);
+    min-width: 1280px;
+    padding: 10px 12px 16px;
+    box-shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+  }
+  .mast {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    align-items: stretch;
+    min-height: 72px;
+    border: 1px solid var(--line);
+    border-bottom: none;
+  }
+  .flank { background: var(--gray); }
+  .mast-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    text-align: center;
+  }
+  .mast-title input {
+    width: 100%;
+    border: none;
+    text-align: center;
+    font-size: 28px;
+    font-weight: 400;
+    padding: 0;
+    background: transparent;
+  }
+  .mast-title input:focus { outline: 1px dashed #98a2b3; }
+  .mast-title-text {
+    width: 100%;
+    text-align: center;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.2;
+  }
+  .range {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.1;
+    padding: 6px 12px 0 14px;
+    white-space: nowrap;
+    text-align: right;
+  }
+  table.grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  table.grid th, table.grid td {
+    border: 1px solid var(--line);
+    vertical-align: top;
+    padding: 4px 6px;
+  }
+  table.grid col.time { width: 68px; }
+  table.grid col.num { width: 64px; }
+  th.day {
+    background: var(--gray);
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 6px 4px;
+  }
+  th.day small {
+    display: block;
+    font-weight: 600;
+    letter-spacing: 0;
+    font-size: 17px;
+  }
+  th.corner { background: var(--gray); }
+  td.time {
+    background: var(--gray);
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.25;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  td.num {
+    text-align: center;
+    font-weight: 700;
+    font-size: 22px;
+    vertical-align: middle;
+    background: white;
+  }
+  tr.band td {
+    background: var(--gray);
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    padding: 4px;
+    vertical-align: middle;
+  }
+  td.lunch-label {
+    background: var(--gray);
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    vertical-align: middle;
+    letter-spacing: 0.04em;
+  }
+  td.after-label {
+    background: var(--gray);
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1.15;
+    vertical-align: middle;
+  }
+  th.day.sat, td.sat { background: #d9d9d9; }
+  tr.rule td {
+    background: #1a1a1a;
+    height: 16px;
+    padding: 0;
+    border-color: #1a1a1a;
+  }
+  .subhead { font-size: 13px; color: #344054; }
+  .line.standing .tx { font-weight: 600; }
+  .line {
+    display: grid;
+    grid-template-columns: 4.4em 1fr;
+    gap: 1px 0;
+    font-size: 14px;
+    line-height: 1.35;
+    padding: 1px 2px;
+    border-radius: 2px;
+  }
+  .line + .line { margin-top: 1px; }
+  .rm { font-weight: 700; white-space: nowrap; }
+  .line.mute { color: #98a2b3; font-weight: 400; }
+  .line.mute .rm { font-weight: 600; }
+  .line.booked {
+    font-size: 18px;
+    grid-template-columns: 61.6px 1fr;
+  }
+  .line.booked .tx {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+  }
+  .line.booked .rm {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .line.booked .sub {
+    font-size: 0.833em;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .line.booked .tag { font-size: 0.722em; }
+  .sub {
+    grid-column: 2;
+    font-size: 12px;
+    font-weight: 400;
+    color: #475467;
+  }
+  .tag {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 0 3px;
+    vertical-align: 1px;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 8px;
+    font-size: 13px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #98a2b3;
+    vertical-align: -2px;
+    margin-right: 4px;
+  }
+  .empty-note {
+    padding: 28px 12px;
+    text-align: center;
+    color: #667085;
+  }
+  .warn { color: #b54708; font-size: 13px; }
+  body:not(.is-admin) .admin-only { display: none !important; }
+  #adminPwd { width: 9rem; }
+  #printPage { display: none; }
+  @page { size: A3 portrait; margin: 0; }
+  @media print {
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+      width: 297mm !important;
+      height: 420mm !important;
+      overflow: hidden !important;
+    }
+    body:has(#printPage img) > *:not(#printPage) { display: none !important; }
+    body:has(#printPage img) #printPage {
+      display: block !important;
+      width: 297mm;
+      height: 420mm;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 3mm;
+      overflow: hidden;
+      background: #fff;
+    }
+    body:has(#printPage img) #printPage img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar noprint">
+    <h1>實驗室週程表 <span>版面依 2026-09-11 長期借用時間表；已填時段每週沿用，上傳的實驗再疊加上去</span></h1>
+    <div class="row">
+      <button type="button" id="authBtn">管理員登入</button>
+      <input id="adminPwd" type="password" placeholder="管理員密碼" autocomplete="current-password" hidden>
+      <button type="button" id="authGo" hidden>確認登入</button>
+      <label class="file admin-only">更新實驗 Excel<input id="file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+      <span class="meta" id="fileName">尚未載入伺服器檔案</span>
+      <label class="meta">工作表
+        <select id="sheet" disabled></select>
+      </label>
+    </div>
+    <div class="drop admin-only" id="drop">把新的 Excel 檔拖到這裡，就會取代伺服器上的實驗檔。需要有「日期」和「節數」欄。</div>
+    <p class="meta" id="serverStatus">正在連接伺服器…</p>
+    <div class="row">
+      <button id="prev" disabled>上一週</button>
+      <select id="week" disabled></select>
+      <button id="next" disabled>下一週</button>
+      <input id="jump" type="date" disabled>
+      <label class="check"><input id="hideCancel" type="checkbox" checked>隱藏「取消」</label>
+      <label class="check"><input id="showStanding" type="checkbox" checked>顯示長期借用</label>
+      <label class="check"><input id="showEmpty" type="checkbox" checked>顯示空室（:601:–:621:）</label>
+      <label class="check"><input id="useColor" type="checkbox" checked>科目色塊</label>
+      <button id="print" disabled title="自動縮放並放大，貼滿一張 A3 直向紙。">列印</button>
+      <button id="pdf" class="primary" disabled>下載 PDF</button>
+      <button id="download" disabled>下載本週 Excel</button>
+    </div>
+    <div class="row">
+      <div class="chips" id="subjects"></div>
+      <span class="meta" id="stats"></span>
+    </div>
+    <details id="mapBox">
+      <summary>欄位對應</summary>
+      <div class="map" id="map"></div>
+    </details>
+    <div class="warn" id="warn"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="sheet-scroll">
+      <div class="sheet" id="sheetView">
+        <div class="empty-note" id="placeholder">正在排出本週時間表。</div>
+      </div>
+    </div>
+  </div>
+  <div id="printPage" aria-hidden="true"></div>
+
+<script>
+const ROWS = [
+  { kind: "period", n: 1, time: ["08:30", "09:10"] },
+  { kind: "band", label: "20 min RECESS 09:10-09:30" },
+  { kind: "period", n: 2, time: ["09:30", "10:10"] },
+  { kind: "period", n: 3, time: ["10:15", "10:55"] },
+  { kind: "band", label: "10 min RECESS 10:55-11:05" },
+  { kind: "period", n: 4, time: ["11:05", "11:45"] },
+  { kind: "period", n: 5, time: ["11:50", "12:30"] },
+  { kind: "rule" },
+  { kind: "lunch", time: ["12:30", "14:05"], label: "LUNCH" },
+  { kind: "rule" },
+  { kind: "period", n: 6, time: ["14:10", "14:50"] },
+  { kind: "band", label: "10 min RECESS 14:50-15:00" },
+  { kind: "period", n: 7, time: ["15:00", "15:40"] },
+  { kind: "band", label: "10 min RECESS 15:40-15:50" },
+  { kind: "period", n: 8, time: ["15:50", "16:30"] },
+  { kind: "after", label: "AFTER\nSCHOOL" }
+];
+
+const BASE_ROOMS = ["601", "616", "617", "618", "619", "620", "621"];
+const LONG_TERM = {
+  "0": {
+    "1": {
+      "601": "English Oral"
+    },
+    "2": {
+      "601": "English Oral",
+      "616": "初二選修-顏曉棠-IPAD",
+      "617": "初二選修-劉家勝鄭啟亮",
+      "618": "數學-吳子健"
+    },
+    "3": {
+      "601": "English Oral",
+      "616": "初二選修-顏曉棠-IPAD",
+      "617": "初二選修-劉家勝鄭啟亮",
+      "620": "初一應用-梁梓笙黎建榮"
+    },
+    "4": {
+      "601": "English Oral",
+      "616": "初三選修-朱鳳鳴-IPAD",
+      "617": "初三選修-劉嘉勝鄭啟亮",
+      "618": "數學-馬偉鋒",
+      "620": "初三選修-Peng-IPAD"
+    },
+    "5": {
+      "601": "English Oral",
+      "616": "初三選修-朱鳳鳴-IPAD",
+      "617": "初三選修-劉嘉勝鄭啟亮",
+      "618": "數學-吳子健",
+      "620": "小一電腦-黃劍橋龍秀芳"
+    },
+    "lunch": {
+      "601": "中午不外借",
+      "616": "小學融合",
+      "617": "中學融合",
+      "620": "英文拔尖-Phoebe-IPAD",
+      "621": "中學活動課"
+    },
+    "6": {
+      "601": "English Oral",
+      "617": "初一應用-梁梓笙黎建榮",
+      "620": "English Skills-Carrie"
+    },
+    "7": {
+      "601": "English Oral",
+      "616": "中文-張雨彤-IPAD",
+      "617": "初二應用-凌兆恩鄭啟亮",
+      "620": "English Skills-Carrie"
+    },
+    "8": {
+      "616": "中文-張雨彤-IPAD",
+      "618": "數學-馬偉鋒"
+    },
+    "after": {
+      "601": "史地科留用",
+      "617": "中學活動課",
+      "618": "中學活動課",
+      "621": "中學活動課"
+    }
+  },
+  "1": {
+    "2": {
+      "601": "史地科備課留用"
+    },
+    "3": {
+      "601": "史地科備課留用",
+      "620": "初二應用-梁梓笙凌兆恩"
+    },
+    "4": {
+      "601": "史地科備課留用",
+      "616": "初一選修-顏曉棠-IPAD",
+      "617": "初一選修-凌兆恩鄭啟亮",
+      "620": "初一選修-Phoebe-IPAD"
+    },
+    "5": {
+      "616": "初一選修-顏曉棠-IPAD",
+      "617": "初一選修-凌兆恩鄭啟亮",
+      "620": "初一選修-Phoebe-IPAD"
+    },
+    "lunch": {
+      "601": "中午不外借",
+      "616": "小學融合",
+      "617": "中學融合",
+      "618": "中學融合",
+      "620": "數學建模培訓-高峰",
+      "621": "中學活動課"
+    },
+    "6": {
+      "616": "English-Kitty-IPAD",
+      "620": "中文-張詠嫦"
+    },
+    "7": {
+      "616": "English-Kitty-IPAD",
+      "617": "初三創科-凌兆恩鄭啟亮"
+    },
+    "8": {
+      "617": "初二應用-梁梓笙凌兆恩",
+      "618": "數學-馬偉鋒",
+      "620": "數學-吳子健"
+    },
+    "after": {
+      "601": "史地科留用",
+      "616": "中學融合",
+      "619": "中學融合",
+      "621": "中學活動課"
+    }
+  },
+  "2": {
+    "1": {
+      "601": "English Oral"
+    },
+    "2": {
+      "601": "English Oral/史地科備課"
+    },
+    "3": {
+      "601": "English Oral"
+    },
+    "4": {
+      "601": "English Oral/史地科備課",
+      "617": "初一應用-溫紫峰黎建榮",
+      "618": "數學-馬偉鋒"
+    },
+    "5": {
+      "601": "English Oral",
+      "617": "初三創科-凌兆恩鄭啟亮",
+      "618": "數學-吳子健"
+    },
+    "lunch": {
+      "601": "中午不外借",
+      "616": "小學融合",
+      "617": "中學融合",
+      "618": "中學融合",
+      "619": "中學融合",
+      "620": "英文拔尖-Phoebe-IPAD",
+      "621": "中學活動課"
+    },
+    "6": {
+      "601": "English Oral",
+      "617": "初一應用-凌兆恩黎建榮"
+    },
+    "after": {
+      "601": "史地科留用",
+      "617": "中學活動課",
+      "618": "中學活動課",
+      "621": "中學活動課"
+    }
+  },
+  "3": {
+    "2": {
+      "601": "初中級組會議",
+      "617": "初三創科-凌兆恩鄭啟亮",
+      "618": "數學-馬偉鋒"
+    },
+    "4": {
+      "601": "史地科備課留用",
+      "620": "小一電腦-黃劍橋黃念香"
+    },
+    "5": {
+      "620": "初二應用-梁梓笙凌兆恩"
+    },
+    "lunch": {
+      "601": "中午不外借",
+      "616": "小學融合",
+      "617": "中學融合",
+      "621": "中學活動課"
+    },
+    "6": {
+      "601": "數學科科組會議",
+      "618": "English Oral",
+      "620": "小學IE"
+    },
+    "7": {
+      "601": "數學科科組會議",
+      "617": "初三創科-凌兆恩鄭啟亮",
+      "618": "English Oral",
+      "620": "小學IE"
+    },
+    "8": {
+      "617": "初二應用-溫紫峰鄭啟亮",
+      "619": "(初二應用-溫紫峰鄭啟亮)",
+      "620": "小學活動課"
+    },
+    "after": {
+      "601": "史地科留用",
+      "616": "中學融合",
+      "619": "科學學會",
+      "620": "小學活動課",
+      "621": "中學活動課"
+    }
+  },
+  "4": {
+    "2": {
+      "618": "數學-吳子健",
+      "620": "中文-張詠嫦"
+    },
+    "3": {
+      "620": "中文-張詠嫦"
+    },
+    "4": {
+      "601": "史地科科組會議",
+      "617": "初三創科-凌兆恩鄭啟亮",
+      "620": "小一電腦-黃劍橋黃念香"
+    },
+    "5": {
+      "620": "小學電腦-黃劍橋曹素珍",
+      "621": "資訊科技科科組會議"
+    },
+    "lunch": {
+      "601": "中午不外借",
+      "616": "小學融合",
+      "617": "數學建模培訓-高峰",
+      "618": "中學融合",
+      "620": "中學融合",
+      "621": "中學活動課"
+    },
+    "8": {
+      "617": "初一應用-梁梓笙黎建榮",
+      "618": "小學活動課-鄧友傑",
+      "620": "小學活動課"
+    },
+    "after": {
+      "601": "史地科留用",
+      "617": "中學融合",
+      "618": "小學活動課-鄧友傑",
+      "619": "中學融合",
+      "620": "小學活動課",
+      "621": "中學活動課"
+    }
+  },
+  "5": {
+    "1": {
+      "618": "機械-陳偉軍",
+      "620": "小學活動課",
+      "621": "VEX-蔡文傑"
+    },
+    "2": {
+      "601": "史地科留用",
+      "616": "ROS-鄭啟亮",
+      "617": "中學活動課",
+      "618": "機械-陳偉軍",
+      "620": "小學活動課",
+      "621": "VEX-蔡文傑"
+    },
+    "3": {
+      "601": "史地科留用",
+      "616": "ROS-鄭啟亮",
+      "617": "中學活動課",
+      "618": "機械-陳偉軍",
+      "620": "小學活動課",
+      "621": "VEX-蔡文傑"
+    },
+    "4": {
+      "601": "史地科留用",
+      "616": "無人機-甘永年",
+      "617": "中學活動課",
+      "618": "機械-陳偉軍",
+      "621": "VEX-蔡文傑"
+    },
+    "5": {
+      "601": "史地科留用",
+      "616": "無人機-甘永年",
+      "617": "中學活動課",
+      "618": "機械-陳偉軍",
+      "621": "VEX-蔡文傑"
+    },
+    "lunch": {
+      "601": "史地科留用",
+      "616": "無人機-甘永年",
+      "621": "VEX-蔡文傑"
+    }
+  }
+};
+const DAY_NAMES = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const FIELDS = [
+  ["date", "日期", true],
+  ["period", "節數", true],
+  ["room", "室號", false],
+  ["subject", "科目", false],
+  ["klass", "班級", false],
+  ["title", "實驗名稱", false],
+  ["teacher", "指導老師", false],
+  ["status", "狀態", false],
+  ["notes", "備註", false],
+  ["groups", "分組數", false]
+];
+const ALIASES = {
+  date: ["日期", "上課日期", "date"],
+  period: ["節數", "節次", "period"],
+  room: ["室號", "課室", "房間", "地點", "room"],
+  subject: ["科目", "學科", "subject"],
+  klass: ["班級", "班別", "class"],
+  title: ["實驗名稱", "實驗", "課題", "活動名稱", "內容"],
+  teacher: ["指導老師", "任教老師", "老師", "教師", "teacher"],
+  status: ["實驗狀態", "狀態", "status"],
+  notes: ["需要物資/備註", "需要物資", "備註", "備注", "notes"],
+  groups: ["分組數", "組數"]
+};
+const COLORS = {
+  "化學": "#fff2cc",
+  "物理": "#ddebf7",
+  "生物": "#e2efda",
+  "科學": "#fce4d6",
+  "數學": "#f8d7da",
+  "電腦": "#ffe599",
+  "多選": "#e4d7f5",
+  "學會": "#eeeeee",
+  "見備註": "#f8cbad"
+};
+const DEFAULT_COLOR = "#f4f4f5";
+
+const $ = (id) => document.getElementById(id);
+let workbook = null;
+let matrix = [];
+let headerIndex = 0;
+let colMap = {};
+let records = [];
+let weeks = [];
+let activeSubjects = null;
+
+function norm(v) {
+  return String(v ?? "")
+    .replace(/（[^）]*）/g, "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\s+/g, "")
+    .replace(/／/g, "/")
+    .toLowerCase();
+}
+function iso(y, m, d) {
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+function asLocalIso(v) {
+  // Spreadsheet date-only cells sometimes arrive as 23:59:17 the day before.
+  const nearNextDay = v.getHours() === 23 && v.getMinutes() >= 58;
+  const d = nearNextDay ? new Date(v.getTime() + 3 * 60 * 1000) : v;
+  return iso(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+function parseDate(v) {
+  if (v == null || v === "") return null;
+  if (v instanceof Date && !isNaN(v.getTime())) return asLocalIso(v);
+  if (typeof v === "number" && v > 20000 && v < 80000) {
+    const utc = new Date(Math.round((v - 25569) * 86400 * 1000));
+    return iso(utc.getUTCFullYear(), utc.getUTCMonth() + 1, utc.getUTCDate());
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if (m) return iso(+m[1], +m[2], +m[3]);
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if (m) {
+    const a = +m[1], b = +m[2], y = +m[3];
+    if (a > 12) return iso(y, b, a);
+    if (b > 12) return iso(y, a, b);
+    return iso(y, b, a);
+  }
+  return null;
+}
+function parsePeriod(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number" && isFinite(v)) return Math.round(v);
+  const s = String(v).trim();
+  if (/午|lunch/i.test(s)) return "lunch";
+  if (/課後|after/i.test(s)) return 9;
+  const m = s.match(/\d+/);
+  if (m) return +m[0];
+  const zh = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  for (const [k, n] of Object.entries(zh)) if (s.includes(k)) return n;
+  return null;
+}
+function roomText(v) {
+  if (v == null || v === "") return "";
+  if (typeof v === "number") return String(Math.round(v));
+  return String(v).trim();
+}
+function cellText(v) {
+  if (v == null) return "";
+  if (v instanceof Date) return "";
+  return String(v).replace(/\s+/g, " ").trim();
+}
+function mondayOf(dateIso) {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const day = dt.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setDate(dt.getDate() + diff);
+  return iso(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+function addDays(dateIso, n) {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return iso(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+function fmtShort(dateIso) {
+  const [, m, d] = dateIso.split("-");
+  return `${+m}/${+d}`;
+}
+function todayIso() {
+  const dt = new Date();
+  return iso(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+}
+
+function detect(matrixRows) {
+  let best = { score: -1, index: 0, map: {} };
+  const limit = Math.min(matrixRows.length, 25);
+  for (let r = 0; r < limit; r++) {
+    const texts = (matrixRows[r] || []).map(norm);
+    const map = {};
+    let score = 0;
+    for (const [field, aliases] of Object.entries(ALIASES)) {
+      const keys = aliases.map(norm);
+      let idx = texts.findIndex((t) => t && keys.includes(t));
+      if (idx < 0) {
+        const sorted = [...keys].sort((a, b) => b.length - a.length);
+        for (const key of sorted) {
+          if (key.length < 2) continue;
+          idx = texts.findIndex((t) => t && t.includes(key));
+          if (idx >= 0) break;
+        }
+      }
+      if (idx >= 0 && !Object.values(map).includes(idx)) {
+        map[field] = idx;
+        score++;
+      }
+    }
+    if (score > best.score && map.date != null && map.period != null) {
+      best = { score, index: r, map };
+    }
+  }
+  return best;
+}
+
+function headerLabel(col) {
+  const raw = matrix[headerIndex] ? matrix[headerIndex][col] : "";
+  const name = cellText(raw) || `欄 ${col + 1}`;
+  return `${XLSX.utils.encode_col(col)} · ${name}`;
+}
+
+function renderMap() {
+  const box = $("map");
+  box.innerHTML = "";
+  const width = matrix.reduce((n, row) => Math.max(n, row.length), 0);
+  for (const [field, label, required] of FIELDS) {
+    const wrap = document.createElement("label");
+    wrap.textContent = required ? `${label} *` : label;
+    const sel = document.createElement("select");
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = "（不用）";
+    sel.appendChild(blank);
+    for (let c = 0; c < width; c++) {
+      const opt = document.createElement("option");
+      opt.value = String(c);
+      opt.textContent = headerLabel(c);
+      sel.appendChild(opt);
+    }
+    if (colMap[field] != null) sel.value = String(colMap[field]);
+    sel.addEventListener("change", () => {
+      if (sel.value === "") delete colMap[field];
+      else colMap[field] = +sel.value;
+      rebuild();
+    });
+    wrap.appendChild(sel);
+    box.appendChild(wrap);
+  }
+}
+
+function parseRecords() {
+  const out = [];
+  if (colMap.date == null || colMap.period == null) return out;
+  for (let r = headerIndex + 1; r < matrix.length; r++) {
+    const row = matrix[r] || [];
+    const date = parseDate(row[colMap.date]);
+    const period = parsePeriod(row[colMap.period]);
+    if (!date || period == null) continue;
+    const item = {
+      date,
+      period,
+      room: colMap.room != null ? roomText(row[colMap.room]) : "",
+      subject: colMap.subject != null ? cellText(row[colMap.subject]) : "",
+      klass: colMap.klass != null ? cellText(row[colMap.klass]) : "",
+      title: colMap.title != null ? cellText(row[colMap.title]) : "",
+      teacher: colMap.teacher != null ? cellText(row[colMap.teacher]) : "",
+      status: colMap.status != null ? cellText(row[colMap.status]) : "",
+      notes: colMap.notes != null ? cellText(row[colMap.notes]) : "",
+      groups: colMap.groups != null ? row[colMap.groups] : ""
+    };
+    if (!item.room && !item.subject && !item.klass && !item.title && !item.teacher) continue;
+    out.push(item);
+  }
+  return out;
+}
+
+function visibleRecords() {
+  const hide = $("hideCancel").checked;
+  return records.filter((rec) => {
+    if (hide && /取消/.test(rec.status)) return false;
+    if (rec.subject && activeSubjects && !activeSubjects.has(rec.subject)) return false;
+    return true;
+  });
+}
+
+function renderSubjects() {
+  const box = $("subjects");
+  box.innerHTML = "";
+  const names = [...new Set(records.map((r) => r.subject).filter(Boolean))];
+  if (!activeSubjects) activeSubjects = new Set(names);
+  names.forEach((name) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "chip" + (activeSubjects.has(name) ? " on" : "");
+    btn.textContent = name;
+    btn.addEventListener("click", () => {
+      if (activeSubjects.has(name)) activeSubjects.delete(name);
+      else activeSubjects.add(name);
+      renderSubjects();
+      render();
+    });
+    box.appendChild(btn);
+  });
+}
+
+function rebuildWeeks() {
+  const dates = records.map((r) => r.date).sort();
+  let start = "2026-08-31";
+  let end = "2027-07-26";
+  if (dates.length) {
+    const min = mondayOf(dates[0]);
+    const max = mondayOf(dates[dates.length - 1]);
+    if (min < start) start = min;
+    if (max > end) end = max;
+  }
+  weeks = [];
+  let cursor = start;
+  while (cursor <= end) {
+    weeks.push(cursor);
+    cursor = addDays(cursor, 7);
+  }
+  const sel = $("week");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  const counts = countByWeek(records);
+  weeks.forEach((w) => {
+    const opt = document.createElement("option");
+    const n = counts.get(w) || 0;
+    opt.value = w;
+    opt.textContent = `${fmtShort(w)} – ${fmtShort(addDays(w, 5))}${n ? "（" + n + " 項實驗）" : ""}`;
+    sel.appendChild(opt);
+  });
+  const todayWeek = mondayOf(todayIso());
+  if (weeks.includes(prev)) sel.value = prev;
+  else if (weeks.includes(todayWeek)) sel.value = todayWeek;
+  else sel.value = weeks[0];
+}
+
+function countByWeek(list) {
+  const map = new Map();
+  list.forEach((rec) => {
+    const w = mondayOf(rec.date);
+    map.set(w, (map.get(w) || 0) + 1);
+  });
+  return map;
+}
+
+function describe(rec) {
+  const parts = [];
+  if (rec.klass) parts.push(rec.klass);
+  if (rec.title) parts.push(rec.title);
+  else if (rec.subject) parts.push(rec.subject);
+  let line = parts.join(" ");
+  if (rec.teacher) line += (line ? " " : "") + `(${rec.teacher})`;
+  const groups = Number(rec.groups);
+  if (groups > 1) line += ` ${groups}組`;
+  return line || rec.subject || "已預約";
+}
+
+function slotFor(period) {
+  if (period === "lunch") return "lunch";
+  if (period >= 9) return "after";
+  if (period >= 1 && period <= 8) return String(period);
+  return "after";
+}
+
+function roomsFor(items) {
+  const extras = [];
+  items.forEach((rec) => {
+    const room = rec.room || "未填室號";
+    if (!BASE_ROOMS.includes(room) && !extras.includes(room)) extras.push(room);
+  });
+  extras.sort((a, b) => a.localeCompare(b, "zh-Hant", { numeric: true }));
+  return BASE_ROOMS.concat(extras);
+}
+
+function standingMap(dayIndex, slot) {
+  if (!$("showStanding").checked) return {};
+  const day = LONG_TERM[String(dayIndex)] || {};
+  return day[slot] || {};
+}
+
+function roomBlock(room, standingText, items, useColor) {
+  const bits = [];
+  if (standingText) {
+    bits.push(`<div class="line standing" title="長期借用，每週沿用"><span class="rm">:${escapeHtml(room)}:</span><span class="tx">${escapeHtml(standingText)}</span></div>`);
+  }
+  items.forEach((rec, i) => {
+    const color = useColor ? (COLORS[rec.subject] || DEFAULT_COLOR) : "transparent";
+    const paint = color === "transparent" ? "" : `background-color:${color};box-shadow:inset 0 0 0 999px ${color};`;
+    const status = rec.status && !/已確認|已完成/.test(rec.status)
+      ? `<span class="tag">${escapeHtml(rec.status)}</span>` : "";
+    const extra = typeof rec.period === "number" && rec.period > 9 ? `第${rec.period}節 ` : "";
+    const notes = rec.notes ? `<div class="sub">${escapeHtml(rec.notes)}</div>` : "";
+    const label = !standingText && i === 0 ? `:${escapeHtml(room)}:` : "";
+    bits.push(`<div class="line booked" style="${paint}" title="${escapeHtml(["本週實驗", rec.subject, rec.status, rec.notes].filter(Boolean).join(" · "))}"><span class="rm">${label}</span><span class="tx">${extra}${escapeHtml(describe(rec))}${status}</span>${notes}</div>`);
+  });
+  if (!bits.length) {
+    return `<div class="line mute"><span class="rm">:${escapeHtml(room)}:</span><span></span></div>`;
+  }
+  return bits.join("");
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[ch]));
+}
+
+function currentWeek() {
+  return $("week").value || (weeks[0] || mondayOf(todayIso()));
+}
+
+function entriesForWeek(list, weekIso) {
+  const days = Array.from({ length: 6 }, (_, i) => addDays(weekIso, i));
+  const bag = {};
+  days.forEach((d) => { bag[d] = {}; });
+  list.forEach((rec) => {
+    if (!bag[rec.date]) return;
+    const slot = slotFor(rec.period);
+    const room = rec.room || "未填室號";
+    if (!bag[rec.date][slot]) bag[rec.date][slot] = {};
+    if (!bag[rec.date][slot][room]) bag[rec.date][slot][room] = [];
+    bag[rec.date][slot][room].push(rec);
+  });
+  return { days, bag };
+}
+
+function cellBody(dayIndex, dayBag, slot, allItems, showEmpty, useColor) {
+  const standing = standingMap(dayIndex, slot);
+  const byRoom = (dayBag && dayBag[slot]) || {};
+  const rooms = roomsFor(allItems);
+  const html = [];
+  rooms.forEach((room) => {
+    const items = byRoom[room] || [];
+    const text = standing[room] || "";
+    if (!text && !items.length && !showEmpty) return;
+    if (!text && !items.length && !BASE_ROOMS.includes(room)) return;
+    html.push(roomBlock(room, text, items, useColor));
+  });
+  return html.join("");
+}
+
+function dayTd(dayIndex, inner) {
+  return `<td class="${dayIndex === 5 ? "sat" : ""}">${inner}</td>`;
+}
+
+function render() {
+  invalidatePrint();
+  const view = $("sheetView");
+  const list = visibleRecords();
+  const week = currentWeek();
+  const { days, bag } = entriesForWeek(list, week);
+  const weekItems = list.filter((rec) => days.includes(rec.date));
+  const showEmpty = $("showEmpty").checked;
+  const useColor = $("useColor").checked;
+  const title = $("sheetTitle") ? $("sheetTitle").value : "26/27學年 本週六樓實驗室使用情況";
+
+  let head = `<tr><th class="corner" colspan="2"></th>`;
+  days.forEach((d, i) => {
+    const n = list.filter((rec) => rec.date === d).length;
+    head += `<th class="day${i === 5 ? " sat" : ""}">${DAY_NAMES[i]}<small>${fmtShort(d)}${n ? " · " + n + "項" : ""}</small></th>`;
+  });
+  head += `</tr>`;
+
+  let body = "";
+  ROWS.forEach((row) => {
+    if (row.kind === "rule") {
+      body += `<tr class="rule"><td colspan="8"></td></tr>`;
+      return;
+    }
+    if (row.kind === "band") {
+      body += `<tr class="band"><td class="time"></td><td colspan="7">${row.label}</td></tr>`;
+      return;
+    }
+    const slot = row.kind === "lunch" ? "lunch" : row.kind === "after" ? "after" : String(row.n);
+    if (row.kind === "lunch") {
+      body += `<tr><td class="time">${row.time[0]}<br>${row.time[1]}</td><td class="lunch-label">${row.label}</td>`;
+    } else if (row.kind === "after") {
+      body += `<tr><td class="after-label" colspan="2">AFTER<br>SCHOOL</td>`;
+    } else {
+      body += `<tr><td class="time">${row.time[0]}<br>${row.time[1]}</td><td class="num">${row.n}</td>`;
+    }
+    days.forEach((d, i) => {
+      body += dayTd(i, cellBody(i, bag[d], slot, weekItems, showEmpty, useColor));
+    });
+    body += `</tr>`;
+  });
+
+  const legend = `<div class="legend"><span><i class="swatch" style="background:#fff"></i>長期借用</span>${useColor ? Object.entries(COLORS).map(([name, color]) =>
+    `<span><i class="swatch" style="background-color:${color};box-shadow:inset 0 0 0 999px ${color}"></i>${name}</span>`).join("") + `<span><i class="swatch" style="background-color:${DEFAULT_COLOR};box-shadow:inset 0 0 0 999px ${DEFAULT_COLOR}"></i>其他本週實驗</span>` : ""}</div>`;
+
+  view.innerHTML = `
+    <div class="mast">
+      <div class="flank"></div>
+      <div class="mast-title">
+        <input id="sheetTitle" value="${escapeHtml(title)}" aria-label="標題">
+        <div class="subhead">最新情況請到內聯網系統查詢</div>
+      </div>
+      <div class="flank"><div class="range">${fmtShort(days[0])} – ${fmtShort(days[5])}</div></div>
+    </div>
+    <table class="grid">
+      <colgroup>
+        <col class="time"><col class="num">
+        <col><col><col><col><col><col>
+      </colgroup>
+      <thead>${head}</thead>
+      <tbody>${body}</tbody>
+    </table>
+    ${legend}`;
+
+  const dates = records.map((rec) => rec.date).sort();
+  const range = dates.length ? `${dates[0]} 至 ${dates[dates.length - 1]}` : "";
+  $("stats").textContent = `長期借用每週沿用${records.length ? ` · 實驗檔 ${records.length} 項${range ? "（" + range + "）" : ""}` : ""} · 本週實驗 ${weekItems.length} 項`;
+  $("print").disabled = false;
+  $("pdf").disabled = false;
+  $("download").disabled = false;
+  fitBookedFonts();
+  queuePrintImage();
+}
+
+function bookedLineCount(el) {
+  if (!el || !el.textContent.trim()) return 0;
+  const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 1;
+  return Math.ceil(el.getBoundingClientRect().height / lineHeight - 0.05);
+}
+function bookedTextWidth(el) {
+  if (!el || !el.textContent.trim()) return 0;
+  const canvas = bookedTextWidth.canvas || (bookedTextWidth.canvas = document.createElement("canvas").getContext("2d"));
+  canvas.font = getComputedStyle(el).font;
+  return canvas.measureText(el.textContent).width;
+}
+function bookedFits(line, size) {
+  line.style.fontSize = `${size}px`;
+  const text = line.querySelector(".tx");
+  const notes = line.querySelector(".sub");
+  const room = line.querySelector(".rm");
+  const roomFits = !room || !room.textContent.trim() || bookedTextWidth(room) <= room.clientWidth - 2;
+  const textFits = bookedLineCount(text) <= 2 && text.scrollWidth <= text.clientWidth + 1;
+  const notesFit = bookedLineCount(notes) <= 2;
+  return roomFits && textFits && notesFit;
+}
+function fitBookedFonts() {
+  const sheet = $("sheetView");
+  if (!sheet) return;
+  const lines = [...sheet.querySelectorAll(".line.booked")];
+  lines.forEach((line) => {
+    let best = 18;
+    let low = 18;
+    let high = 48;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (bookedFits(line, mid)) {
+        best = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    line.style.fontSize = `${best}px`;
+  });
+  if (!lines.length) return;
+  const { w: pageW, h: pageH } = pageBoxPx();
+  const targetH = pageH * Math.max(sheet.offsetWidth, 1) / pageW;
+  for (let guard = 0; sheet.offsetHeight > targetH + 1 && guard < 40; guard++) {
+    let changed = false;
+    lines.forEach((line) => {
+      const size = parseFloat(line.style.fontSize) || 18;
+      if (size > 18) {
+        line.style.fontSize = `${size - 1}px`;
+        changed = true;
+      }
+    });
+    if (!changed) break;
+  }
+}
+
+function plainCell(dayIndex, dayBag, slot, allItems, showEmpty) {
+  const standing = standingMap(dayIndex, slot);
+  const byRoom = (dayBag && dayBag[slot]) || {};
+  const rooms = roomsFor(allItems);
+  const lines = [];
+  rooms.forEach((room) => {
+    const items = byRoom[room] || [];
+    const text = standing[room] || "";
+    if (!text && !items.length && !showEmpty) return;
+    if (!text && !items.length && !BASE_ROOMS.includes(room)) return;
+    if (text) lines.push(`:${room}:${text}`);
+    if (!text && !items.length) {
+      lines.push(`:${room}:`);
+      return;
+    }
+    items.forEach((rec, i) => {
+      const prefix = !text && i === 0 ? `:${room}:` : (text || i > 0 ? `:${room}:` : "");
+      const extra = typeof rec.period === "number" && rec.period > 9 ? `第${rec.period}節 ` : "";
+      lines.push(`${prefix}${extra}${describe(rec)}${rec.notes ? ` [${rec.notes}]` : ""}`);
+    });
+  });
+  return lines.join("\n");
+}
+
+function downloadWeek() {
+  const list = visibleRecords();
+  const week = currentWeek();
+  const { days, bag } = entriesForWeek(list, week);
+  const weekItems = list.filter((rec) => days.includes(rec.date));
+  const showEmpty = $("showEmpty").checked;
+  const title = $("sheetTitle") ? $("sheetTitle").value : "26/27學年 本週六樓實驗室使用情況";
+  const aoa = [];
+  aoa.push(["", "", title, "", "", "", "", ""]);
+  aoa.push(["", "", "最新情況請到內聯網系統查詢", "", "", "", "", ""]);
+  aoa.push(["", "", ...days.map((d, i) => `${DAY_NAMES[i]}\n${fmtShort(d)}`)]);
+  const merges = [
+    { s: { r: 0, c: 2 }, e: { r: 0, c: 6 } },
+    { s: { r: 1, c: 2 }, e: { r: 1, c: 6 } }
+  ];
+  ROWS.forEach((row) => {
+    const r = aoa.length;
+    if (row.kind === "rule") {
+      aoa.push(["", "", "", "", "", "", "", ""]);
+      merges.push({ s: { r, c: 0 }, e: { r, c: 7 } });
+      return;
+    }
+    if (row.kind === "band") {
+      aoa.push(["", row.label, "", "", "", "", "", ""]);
+      merges.push({ s: { r, c: 1 }, e: { r, c: 7 } });
+      return;
+    }
+    const slot = row.kind === "lunch" ? "lunch" : row.kind === "after" ? "after" : String(row.n);
+    let line;
+    if (row.kind === "after") {
+      line = ["AFTER \nSCHOOL", ""];
+      merges.push({ s: { r, c: 0 }, e: { r, c: 1 } });
+    } else if (row.kind === "lunch") {
+      line = [row.time.join("\n"), "LUNCH"];
+    } else {
+      line = [row.time.join("\n"), row.n];
+    }
+    days.forEach((d, i) => line.push(plainCell(i, bag[d], slot, weekItems, showEmpty)));
+    aoa.push(line);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!merges"] = merges;
+  ws["!cols"] = [
+    { wch: 14 }, { wch: 28 },
+    { wch: 36 }, { wch: 36 }, { wch: 36 }, { wch: 36 }, { wch: 36 }, { wch: 36 }
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "週程表");
+  XLSX.writeFile(wb, `週程表_${week}.xlsx`);
+}
+
+function rebuild() {
+  records = parseRecords();
+  const subjects = [...new Set(records.map((r) => r.subject).filter(Boolean))];
+  activeSubjects = new Set(subjects);
+  rebuildWeeks();
+  renderSubjects();
+  const dates = records.map((r) => r.date).sort();
+  if (!colMap.date && !colMap.period) {
+    $("warn").textContent = "找不到「日期」和「節數」。請在欄位對應裡選對的欄。";
+    $("mapBox").open = true;
+  } else if (!records.length) {
+    $("warn").textContent = "已讀到工作表，但沒有同時具有日期和節數的資料列。";
+    $("mapBox").open = true;
+  } else {
+    $("warn").textContent = "";
+    $("stats").textContent = `${records.length} 項 · ${dates[0]} 至 ${dates[dates.length - 1]}`;
+  }
+  const ready = true;
+  ["week", "prev", "next", "jump"].forEach((id) => { $(id).disabled = !ready; });
+  render();
+}
+
+function useSheet(name) {
+  const ws = workbook.Sheets[name];
+  matrix = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: false });
+  const found = detect(matrix);
+  headerIndex = found.index;
+  colMap = found.map;
+  renderMap();
+  if (found.score < 2) $("mapBox").open = true;
+  rebuild();
+}
+
+function loadWorkbook(wb, name) {
+  workbook = wb;
+  $("fileName").textContent = name || "已載入";
+  const sel = $("sheet");
+  sel.innerHTML = "";
+  wb.SheetNames.forEach((sheetName) => {
+    const opt = document.createElement("option");
+    opt.value = sheetName;
+    opt.textContent = sheetName;
+    sel.appendChild(opt);
+  });
+  sel.disabled = wb.SheetNames.length <= 1;
+  sel.onchange = () => useSheet(sel.value);
+  useSheet(wb.SheetNames[0]);
+}
+
+function readBuffer(buf, name) {
+  if (typeof XLSX === "undefined") {
+    $("warn").textContent = "Excel 元件尚未載入。請確認可以連上網路後重新整理。";
+    return;
+  }
+  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  loadWorkbook(wb, name);
+}
+
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      readBuffer(reader.result, file.name);
+      resolve();
+    };
+    reader.onerror = () => reject(reader.error || new Error("無法讀取檔案"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+let serverMeta = null;
+
+function isPlannerAdmin() {
+  return localStorage.getItem("is_lab_admin") === "true";
+}
+function applyAdminUi() {
+  document.body.classList.toggle("is-admin", isPlannerAdmin());
+  $("authBtn").textContent = isPlannerAdmin() ? "登出" : "管理員登入";
+  if (isPlannerAdmin()) {
+    $("adminPwd").hidden = true;
+    $("authGo").hidden = true;
+  }
+}
+function serverLabel(meta) {
+  if (!meta || !meta.fileName) return "伺服器尚未有實驗檔。管理員登入後可以上傳。";
+  const when = meta.updatedAt ? meta.updatedAt.replace("T", " ").slice(0, 16) : "";
+  return `伺服器檔案：${meta.fileName}${when ? "（" + when + "）" : ""}`;
+}
+async function applyServerSchedule(meta, buffer) {
+  if (!meta || !buffer) return;
+  if (serverMeta && serverMeta.updatedAt === meta.updatedAt && serverMeta.fileName === meta.fileName && workbook) {
+    $("serverStatus").textContent = serverLabel(meta);
+    return;
+  }
+  readBuffer(buffer, meta.fileName || "伺服器實驗檔");
+  serverMeta = meta;
+  $("serverStatus").textContent = serverLabel(meta);
+}
+async function publishScheduleFile(file) {
+  if (!isPlannerAdmin()) return;
+  $("warn").textContent = "";
+  $("serverStatus").textContent = "正在儲存到伺服器…";
+  try {
+    await readFile(file);
+    if (!window.WeeklyScheduleCloud || !window.WeeklyScheduleCloud.ready) {
+      throw new Error("伺服器尚未連接");
+    }
+    const meta = await window.WeeklyScheduleCloud.save(file);
+    serverMeta = meta;
+    $("serverStatus").textContent = serverLabel(meta);
+  } catch (err) {
+    $("serverStatus").textContent = serverMeta ? serverLabel(serverMeta) : "尚未儲存到伺服器";
+    $("warn").textContent = "未能儲存到伺服器。" + (err && err.message ? err.message : "請稍後再試。");
+  }
+}
+
+$("authBtn").addEventListener("click", () => {
+  if (isPlannerAdmin()) {
+    localStorage.setItem("is_lab_admin", "false");
+    applyAdminUi();
+    return;
+  }
+  $("adminPwd").hidden = false;
+  $("authGo").hidden = false;
+  $("adminPwd").focus();
+});
+$("authGo").addEventListener("click", () => {
+  const expected = localStorage.getItem("admin_pwd") || "admin123";
+  if ($("adminPwd").value === expected) {
+    localStorage.setItem("is_lab_admin", "true");
+    $("adminPwd").value = "";
+    $("warn").textContent = "";
+    applyAdminUi();
+  } else {
+    $("warn").textContent = "密碼不正確。";
+  }
+});
+$("adminPwd").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") $("authGo").click();
+});
+applyAdminUi();
+
+$("file").addEventListener("change", () => {
+  const file = $("file").files[0];
+  if (file) publishScheduleFile(file);
+});
+const drop = $("drop");
+["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => {
+  e.preventDefault();
+  drop.classList.add("over");
+}));
+["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => {
+  e.preventDefault();
+  drop.classList.remove("over");
+}));
+drop.addEventListener("drop", (e) => {
+  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file && isPlannerAdmin()) publishScheduleFile(file);
+});
+$("week").addEventListener("change", render);
+$("prev").addEventListener("click", () => {
+  const i = weeks.indexOf($("week").value);
+  if (i > 0) { $("week").value = weeks[i - 1]; render(); }
+});
+$("next").addEventListener("click", () => {
+  const i = weeks.indexOf($("week").value);
+  if (i >= 0 && i < weeks.length - 1) { $("week").value = weeks[i + 1]; render(); }
+});
+$("jump").addEventListener("change", () => {
+  if (!$("jump").value) return;
+  const target = mondayOf($("jump").value);
+  if (weeks.includes(target)) $("week").value = target;
+  else {
+    const opt = document.createElement("option");
+    opt.value = target;
+    opt.textContent = `${fmtShort(target)} – ${fmtShort(addDays(target, 5))}`;
+    $("week").appendChild(opt);
+    $("week").value = target;
+    if (!weeks.includes(target)) weeks.push(target);
+  }
+  render();
+});
+["hideCancel", "showStanding", "showEmpty", "useColor"].forEach((id) => $(id).addEventListener("change", () => {
+  if (id === "hideCancel") renderSubjects();
+  render();
+}));
+let printToken = 0;
+let printJob = null;
+
+function invalidatePrint() {
+  printToken += 1;
+  printJob = null;
+  const page = $("printPage");
+  if (page) page.replaceChildren();
+}
+function queuePrintImage() {
+  clearTimeout(queuePrintImage.timer);
+  queuePrintImage.timer = setTimeout(() => {
+    ensurePrintImage().catch(() => {});
+  }, 200);
+}
+function pageBoxPx() {
+  const pxPerMm = 96 / 25.4;
+  const marginMm = 3;
+  return {
+    w: (297 - marginMm * 2) * pxPerMm,
+    h: (420 - marginMm * 2) * pxPerMm
+  };
+}
+function stretchSheet(sheet) {
+  const { w: pageW, h: pageH } = pageBoxPx();
+  const naturalW = Math.max(sheet.offsetWidth, 1);
+  const scale = pageW / naturalW;
+  for (let pass = 0; pass < 6; pass++) {
+    const extra = pageH / scale - sheet.offsetHeight;
+    if (extra < 1) break;
+    const rows = [...sheet.querySelectorAll("table.grid tbody tr")];
+    if (!rows.length) break;
+    const weights = rows.map((row) => row.classList.contains("rule") ? 0.25 : row.classList.contains("band") ? 0.45 : 1);
+    const sum = weights.reduce((total, weight) => total + weight, 0) || 1;
+    rows.forEach((row, index) => {
+      const current = row.getBoundingClientRect().height;
+      row.style.height = `${current + extra * (weights[index] / sum)}px`;
+    });
+  }
+}
+async function captureFitted() {
+  const source = $("sheetView");
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-20000px;top:0;pointer-events:none;";
+  const clone = source.cloneNode(true);
+  clone.id = "sheetCapture";
+  clone.style.width = `${Math.max(source.offsetWidth, 1280)}px`;
+  clone.style.zoom = "";
+  clone.style.transform = "none";
+  const liveTitle = source.querySelector("#sheetTitle");
+  const copyTitle = clone.querySelector("#sheetTitle");
+  if (liveTitle && copyTitle) {
+    const stand = document.createElement("div");
+    stand.className = "mast-title-text";
+    stand.textContent = liveTitle.value;
+    copyTitle.replaceWith(stand);
+  }
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  try {
+    stretchSheet(clone);
+    return await html2canvas(clone, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false
+    });
+  } finally {
+    host.remove();
+  }
+}
+function ensurePrintImage() {
+  if (typeof html2canvas !== "function") {
+    return Promise.reject(new Error("html2canvas"));
+  }
+  const token = printToken;
+  if (printJob && printJob.token === token) return printJob.promise;
+  const promise = (async () => {
+    const canvas = await captureFitted();
+    if (token !== printToken) return ensurePrintImage();
+    const page = $("printPage");
+    const img = new Image();
+    img.alt = "週程表";
+    img.src = canvas.toDataURL("image/jpeg", 0.92);
+    page.replaceChildren(img);
+    if (img.decode) await img.decode();
+    return img.src;
+  })();
+  promise.catch(() => {
+    if (printJob && printJob.promise === promise) printJob = null;
+  });
+  printJob = { token, promise };
+  return promise;
+}
+async function downloadPdf() {
+  const button = $("pdf");
+  const label = button.textContent;
+  if (typeof html2canvas !== "function" || !window.jspdf) {
+    $("warn").textContent = "PDF 元件尚未載入。請確認可以連上網路後重新整理。";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "正在產生 PDF…";
+  $("warn").textContent = "";
+  try {
+    const url = await ensurePrintImage();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a3" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 3;
+    pdf.addImage(url, "JPEG", margin, margin, pageW - margin * 2, pageH - margin * 2);
+    pdf.save(`週程表_${currentWeek()}.pdf`);
+  } catch (err) {
+    $("warn").textContent = "PDF 未能產生。請改用「列印」，並在列印視窗選擇儲存為 PDF。";
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
+}
+function printPlanner() {
+  const button = $("print");
+  const label = button.textContent;
+  const img = $("printPage").querySelector("img");
+  if (img && img.complete && printJob && printJob.token === printToken) {
+    window.print();
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "正在準備列印…";
+  ensurePrintImage().then(() => {
+    button.disabled = false;
+    button.textContent = label;
+    window.print();
+  }).catch(() => {
+    button.disabled = false;
+    button.textContent = label;
+    $("warn").textContent = "未能準備列印。請再試一次。";
+  });
+}
+
+window.addEventListener("resize", () => {
+  clearTimeout(fitBookedFonts.timer);
+  fitBookedFonts.timer = setTimeout(() => {
+    fitBookedFonts();
+    invalidatePrint();
+    queuePrintImage();
+  }, 200);
+});
+$("print").addEventListener("click", printPlanner);
+document.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p") {
+    event.preventDefault();
+    printPlanner();
+  }
+});
+$("pdf").addEventListener("click", downloadPdf);
+$("download").addEventListener("click", downloadWeek);
+
+["week", "prev", "next", "jump"].forEach((id) => { $(id).disabled = false; });
+rebuildWeeks();
+render();
+
+window.Planner = { readBuffer, loadWorkbook, downloadPdf, ensurePrintImage, applyServerSchedule };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getBytes } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-storage.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBb3VxLsd-T-aMnEmhT7eBO9hPeQBbZqvQ",
+  authDomain: "mbcscilab-ff131.firebaseapp.com",
+  projectId: "mbcscilab-ff131",
+  databaseURL: "https://mbcscilab-ff131-default-rtdb.firebaseio.com",
+  storageBucket: "mbcscilab-ff131.firebasestorage.app",
+  messagingSenderId: "324977891269",
+  appId: "1:324977891269:web:70f4f958cf69182d1e5dac"
+};
+const SCHEDULE_PATH = "weekly_planner/current.xlsx";
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
+let authPromise = null;
+
+function ensureAuth() {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  if (!authPromise) {
+    authPromise = signInAnonymously(auth).catch((err) => {
+      authPromise = null;
+      throw err;
+    });
+  }
+  return authPromise;
+}
+
+async function loadMetaBuffer(meta) {
+  await ensureAuth();
+  const buffer = await getBytes(storageRef(storage, meta.storagePath || SCHEDULE_PATH));
+  return buffer;
+}
+
+window.WeeklyScheduleCloud = {
+  ready: true,
+  async save(file) {
+    await ensureAuth();
+    const fileRef = storageRef(storage, SCHEDULE_PATH);
+    await uploadBytes(fileRef, file, {
+      contentType: file.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+    const meta = {
+      fileName: file.name,
+      storagePath: SCHEDULE_PATH,
+      size: file.size,
+      updatedAt: new Date().toISOString()
+    };
+    await set(ref(db, "lab_weekly_schedule"), meta);
+    return meta;
+  }
+};
+
+onValue(ref(db, "lab_weekly_schedule"), async (snapshot) => {
+  const status = document.getElementById("serverStatus");
+  if (!snapshot.exists()) {
+    if (status) status.textContent = "伺服器尚未有實驗檔。管理員登入後可以上傳。";
+    return;
+  }
+  const meta = snapshot.val();
+  try {
+    if (status) status.textContent = "正在讀取伺服器上的實驗檔…";
+    const buffer = await loadMetaBuffer(meta);
+    if (window.Planner && window.Planner.applyServerSchedule) {
+      await window.Planner.applyServerSchedule(meta, buffer);
+    }
+  } catch (err) {
+    if (status) status.textContent = "未能讀取伺服器上的實驗檔。";
+    const warn = document.getElementById("warn");
+    if (warn) warn.textContent = err && err.message ? err.message : "請稍後再試。";
+  }
+});
+</script>
+</body>
+</html>
