@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="浸中科學實驗室">
+    <title>澳門浸信中學 · 科學實驗室</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #16324a;
+            --muted: #5d7284;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Nunito, "Microsoft JhengHei", "PingFang HK", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 12% 18%, rgba(255, 214, 102, 0.45), transparent 28%),
+                radial-gradient(circle at 88% 8%, rgba(125, 211, 252, 0.55), transparent 26%),
+                radial-gradient(circle at 80% 88%, rgba(167, 243, 208, 0.45), transparent 24%),
+                linear-gradient(180deg, #e7f6ff 0%, #f8fbff 42%, #fff8ef 100%);
+        }
+        .sky {
+            position: relative;
+            overflow: hidden;
+            min-height: 100vh;
+            padding: 36px 18px 48px;
+        }
+        .bubble {
+            position: absolute;
+            border-radius: 999px;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+        }
+        .b1 { width: 90px; height: 90px; left: 6%; top: 120px; }
+        .b2 { width: 46px; height: 46px; left: 14%; top: 210px; }
+        .b3 { width: 70px; height: 70px; right: 8%; top: 160px; }
+        .b4 { width: 28px; height: 28px; right: 16%; top: 250px; }
+        header {
+            position: relative;
+            text-align: center;
+            max-width: 820px;
+            margin: 0 auto 8px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            border: 3px solid #16324a;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            box-shadow: 0 4px 0 #16324a;
+        }
+        h1 {
+            margin: 18px 0 8px;
+            font-size: clamp(34px, 6vw, 64px);
+            line-height: 1.05;
+            font-weight: 900;
+        }
+        h1 span { display: inline-block; }
+        .lead {
+            margin: 0 auto;
+            max-width: 640px;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--muted);
+        }
+        .grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            max-width: 1080px;
+            margin: 28px auto 0;
+        }
+        a.card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            background: #fff;
+            border-radius: 28px;
+            padding: 22px 16px 18px;
+            border: 4px solid var(--line, #9fd6ee);
+            box-shadow: 0 8px 0 var(--line, #9fd6ee);
+            transition: transform 0.15s ease;
+        }
+        a.card:hover { transform: translateY(-6px) rotate(-1deg); }
+        a.card:active { transform: translateY(2px); box-shadow: 0 3px 0 var(--line, #9fd6ee); }
+        a.card:focus-visible { outline: 4px solid #16324a; outline-offset: 3px; }
+        .face {
+            width: 92px;
+            height: 92px;
+            display: grid;
+            place-items: center;
+            font-size: 52px;
+            line-height: 1;
+            border-radius: 28px;
+            background: var(--wash, #e7f6ff);
+            border: 3px solid #fff;
+            box-shadow: inset 0 -6px 0 rgba(22, 50, 74, 0.06);
+        }
+        a.card h2 {
+            margin: 12px 0 4px;
+            font-size: 20px;
+            font-weight: 900;
+        }
+        a.card p {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--muted);
+        }
+        footer {
+            position: relative;
+            text-align: center;
+            margin-top: 28px;
+            font-weight: 800;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        @media (max-width: 640px) {
+            .sky { padding-top: 24px; }
+            .lead { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sky">
+        <div class="bubble b1"></div>
+        <div class="bubble b2"></div>
+        <div class="bubble b3"></div>
+        <div class="bubble b4"></div>
+        <header>
+            <div class="badge">🧪 澳門浸信中學 · MBC SCI LAB</div>
+            <h1><span>科學實驗室</span></h1>
+            <p class="lead">按下面的按鈕，只會開啟該項功能。較慢的電腦不必一次載入整個系統。</p>
+        </header>
+        <nav class="grid" aria-label="實驗室功能">
+            <a class="card" style="--line:#7ec8e3;--wash:#e5f6ff" href="rules.html">
+                <div class="face">🛡️</div>
+                <h2>核心安全守則</h2>
+                <p>守則、安全手冊與測驗</p>
+            </a>
+            <a class="card" style="--line:#f0b429;--wash:#fff4d6" href="inventory.html">
+                <div class="face">📦</div>
+                <h2>實驗室庫存與定位</h2>
+                <p>藥品、儀器與存放位置</p>
+            </a>
+            <a class="card" style="--line:#6fbf73;--wash:#e7f8e8" href="procedures.html">
+                <div class="face">📂</div>
+                <h2>實驗程序資料庫</h2>
+                <p>步驟、器材與注意事項</p>
+            </a>
+            <a class="card" style="--line:#6aa6ff;--wash:#e7f0ff" href="booking.html">
+                <div class="face">📅</div>
+                <h2>實驗室預約</h2>
+                <p>預約課室與時段</p>
+            </a>
+            <a class="card" style="--line:#f08aa0;--wash:#ffe8ee" href="incidents.html">
+                <div class="face">📊</div>
+                <h2>意外事故數據分析</h2>
+                <p>紀錄、統計與匯出</p>
+            </a>
+            <a class="card" style="--line:#b794f6;--wash:#f3e8ff" href="ai.html">
+                <div class="face">🤖</div>
+                <h2>AI 實驗安全智囊</h2>
+                <p>詢問實驗安全問題</p>
+            </a>
+            <a class="card" style="--line:#f0a05a;--wash:#fff0e0" href="procedure-scan.html">
+                <div class="face">📷</div>
+                <h2>實驗程序文件分析</h2>
+                <p>上傳程序，由 AI 分析</p>
+            </a>
+            <a class="card" style="--line:#8aa0b4;--wash:#eef3f7" href="weekly-planner.html">
+                <div class="face">🗓️</div>
+                <h2>週程表</h2>
+                <p>本週實驗室使用時間表</p>
+            </a>
+        </nav>
+        <footer>中學科學實驗室綜合管理系統</footer>
+    </div>
+</body>
+</html>
