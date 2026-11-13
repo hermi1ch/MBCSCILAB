@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#e7f6ff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="元素大挑戰">
+    <title>化學見習生：元素大挑戰</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #16324a;
+            --muted: #4d6478;
+            --line: #16324a;
+            --paper: #fffdf8;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; height: 100%; }
+        body {
+            overflow: hidden;
+            color: var(--ink);
+            font-family: "Noto Sans TC", "PingFang HK", "Microsoft JhengHei", "Heiti TC", sans-serif;
+            background:
+                radial-gradient(circle at 8% 0%, rgba(255, 214, 102, .5), transparent 28%),
+                radial-gradient(circle at 100% 8%, rgba(125, 211, 252, .55), transparent 26%),
+                linear-gradient(180deg, #e7f6ff 0%, #fff8ef 100%);
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+        button, input { font: inherit; color: inherit; }
+        button {
+            background: #fff;
+            border: 3px solid var(--line);
+            border-radius: 16px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        button:disabled { opacity: .45; cursor: default; }
+        button:focus-visible, a:focus-visible { outline: 3px solid #0f6e86; outline-offset: 2px; }
+        #app {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #hud {
+            width: min(520px, 100%);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+        }
+        #back-btn, #sound-btn, #points-btn, #player-btn {
+            border-radius: 999px;
+            box-shadow: 0 3px 0 var(--line);
+            background: #fff;
+            min-width: 44px;
+            min-height: 40px;
+            padding: 6px 10px;
+            font-weight: 900;
+        }
+        #player-btn {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+            background: transparent;
+            border-color: transparent;
+            box-shadow: none;
+            padding-left: 2px;
+        }
+        #player-btn b, #player-btn small { display: block; }
+        #player-btn b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #player-btn small { color: var(--muted); font-size: 12px; }
+        #view {
+            width: min(520px, 100%);
+            margin: 0 auto;
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        #view.play { overflow: hidden; }
+        .wrap, .panel, .playcol { padding: 6px 14px calc(16px + env(safe-area-inset-bottom)); }
+        .wrap, .panel { display: flex; flex-direction: column; gap: 12px; }
+        .playcol { min-height: 100%; display: flex; flex-direction: column; gap: 8px; }
+        .playcol.fit { height: 100%; }
+        .cardbox {
+            background: var(--paper);
+            border: 3px solid var(--line);
+            border-radius: 22px;
+            padding: 12px;
+            box-shadow: 0 6px 0 rgba(22, 50, 74, .08);
+        }
+        .kicker { margin: 0 0 4px; font-weight: 900; color: #0f6e86; font-size: 13px; letter-spacing: .04em; }
+        h2 { margin: 0 0 8px; font-size: 24px; line-height: 1.3; }
+        .how { margin: 0; font-weight: 700; color: var(--muted); line-height: 1.45; }
+        .tip { font-size: 22px; line-height: 1.35; }
+        .primary, .ghost {
+            width: 100%;
+            padding: 13px 12px;
+            font-size: 17px;
+            box-shadow: 0 4px 0 var(--line);
+        }
+        .primary { background: #0f6e86; color: #fff; }
+        .ghost { background: #fff; }
+        .primary:active, .ghost:active, .mode:active, .bin:active, .tiny:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 var(--line);
+        }
+        .actions { display: flex; flex-direction: column; gap: 10px; }
+        .check { display: flex; gap: 10px; align-items: center; font-weight: 800; }
+        .check input { width: 22px; height: 22px; }
+        .hero { display: flex; gap: 12px; align-items: center; }
+        .person { width: 74px; flex: none; }
+        .head {
+            width: 48px; height: 48px; margin: 0 auto; border-radius: 50%;
+            background: #ffd7b5; border: 3px solid var(--line); position: relative; z-index: 1;
+        }
+        .head::before, .head::after {
+            content: ""; position: absolute; top: 18px; width: 5px; height: 5px;
+            background: var(--ink); border-radius: 50%;
+        }
+        .head::before { left: 12px; }
+        .head::after { right: 12px; }
+        .goggles {
+            position: absolute; left: 4px; right: 4px; top: 14px; height: 14px;
+            border: 3px solid var(--line); border-radius: 8px; background: rgba(125, 211, 252, .65);
+        }
+        .coat {
+            width: 64px; height: 46px; margin: -6px auto 0; border-radius: 12px 12px 16px 16px;
+            border: 3px solid var(--line); background: var(--coat, #f7fbff); position: relative;
+        }
+        .pocket {
+            width: 16px; height: 12px; border: 2px solid var(--line); border-radius: 4px;
+            position: absolute; right: 8px; top: 14px;
+        }
+        .glove {
+            position: absolute; bottom: -6px; width: 14px; height: 14px; border-radius: 50%;
+            background: #b7f0c4; border: 3px solid var(--line);
+        }
+        .glove.l { left: -8px; }
+        .glove.r { right: -8px; }
+        .hero-copy b { display: block; font-size: 18px; }
+        .hero-copy span, .hero-copy small { display: block; font-weight: 800; color: var(--muted); }
+        .shelf { display: flex; gap: 6px; margin-top: 8px; }
+        .shelf i {
+            width: 40px; height: 40px; display: grid; place-items: center; font-style: normal;
+            border-radius: 12px; border: 2px solid var(--line); background: #fff; font-size: 18px;
+        }
+        .shelf i.off { filter: grayscale(1); opacity: .4; }
+        .bar, .timebar {
+            height: 12px; border-radius: 999px; background: #e7eef3;
+            border: 2px solid var(--line); overflow: hidden;
+        }
+        .bar > span, .timebar > span { display: block; height: 100%; width: 0; background: #22c55e; }
+        .mode {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            text-align: left;
+            padding: 12px;
+            border-radius: 20px;
+            box-shadow: 0 5px 0 var(--line);
+        }
+        .mode .ico { font-size: 30px; width: 42px; text-align: center; flex: none; }
+        .mode b { display: block; font-size: 18px; }
+        .mode small { color: var(--muted); font-weight: 800; }
+        .grid5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+        .cell {
+            position: relative;
+            min-height: 52px;
+            border-radius: 14px;
+            padding: 4px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .cell small { font-size: 10px; font-weight: 800; color: var(--muted); }
+        .cell .sym { font-size: 18px; }
+        .cell.none { background: #f4f7fa; }
+        .cell.low { background: #ffd5d5; }
+        .cell.mid { background: #fff1b8; }
+        .cell.good { background: #c9f5d6; }
+        .cell.star::after {
+            content: "★";
+            position: absolute;
+            top: 1px; right: 4px;
+            font-size: 9px;
+            color: #d97706;
+        }
+        .legend { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 12px; font-weight: 800; color: var(--muted); }
+        .legend b { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border: 2px solid var(--line); vertical-align: -2px; }
+        .sym { font-family: Nunito, "Segoe UI", sans-serif; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+        .links { display: flex; gap: 8px; }
+        .links button { flex: 1; padding: 10px 8px; box-shadow: 0 3px 0 #d5e0e8; }
+        .footnote { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); line-height: 1.45; }
+        .gamebar { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-weight: 900; font-size: 14px; }
+        .tiny { padding: 6px 10px; border-radius: 999px; box-shadow: 0 3px 0 var(--line); }
+        .feedback {
+            min-height: 46px;
+            background: #fff;
+            border: 3px solid var(--line);
+            border-radius: 14px;
+            padding: 8px 10px;
+            font-weight: 800;
+            font-size: 15px;
+            line-height: 1.35;
+        }
+        .arena {
+            flex: 1;
+            min-height: 160px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 22px;
+            border: 3px solid var(--line);
+            background:
+                radial-gradient(circle at 18% 12%, rgba(255,255,255,.85), transparent 28%),
+                linear-gradient(#dff4ff, #fff6ea);
+            touch-action: none;
+        }
+        .arena.lab {
+            background: #9fd0de url("assets/catcher/lab-bg.jpg") center bottom / cover no-repeat;
+        }
+        .arena.lab::after { content: none; }
+        .catcher {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: min(52%, 230px);
+            z-index: 4;
+            touch-action: none;
+            pointer-events: none;
+        }
+        .catcher .sprite { position: relative; }
+        .catcher.ready .sprite { animation: bob 1.5s ease-in-out infinite; }
+        .catcher img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .catcher.correct img { filter: drop-shadow(0 0 16px #d7fbff) brightness(1.18); }
+        .catcher.burnt img { filter: drop-shadow(0 0 14px #ffb15a); }
+        .caught {
+            position: absolute;
+            left: 14%;
+            top: 53.5%;
+            width: 28%;
+            height: 22%;
+            display: grid;
+            place-items: center;
+            border-radius: 16%;
+            background: #17243f;
+            color: #e7fbff;
+            border: 3px solid #9ad4ea;
+            font-family: "Noto Sans TC", "PingFang HK", "Microsoft JhengHei", sans-serif;
+            font-weight: 900;
+            font-size: 13cqw;
+            line-height: 1;
+            letter-spacing: 0;
+            box-shadow: 0 0 10px #7ee7ff, inset 0 0 10px rgba(130, 220, 255, .4);
+            z-index: 6;
+        }
+        .catcher { container-type: inline-size; }
+        .caught.long { font-size: 8.4cqw; }
+        .catcher.correct .caught {
+            left: 14%;
+            top: 64%;
+            width: 34%;
+            height: 22%;
+            background: #f4fdff;
+            color: #16324a;
+            border-color: #ffffff;
+            box-shadow: 0 0 16px #ffffff;
+        }
+        .catcher.burnt .caught { visibility: hidden; }
+        .caught:empty { display: none; }
+        .aim {
+            position: absolute;
+            left: 25%;
+            top: 11%;
+            width: 52px;
+            height: 46px;
+            margin: -64px 0 0 -26px;
+            z-index: 7;
+            pointer-events: none;
+        }
+        .aim::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            border-left: 16px solid transparent;
+            border-right: 16px solid transparent;
+            border-top: 30px solid #ffe14a;
+            filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 12px #7ee7ff);
+            animation: aimglow .9s ease-in-out infinite;
+        }
+        .catcher.correct .aim, .catcher.burnt .aim { display: none; }
+        .bubble {
+            position: absolute;
+            width: 54px;
+            height: 54px;
+            margin: -27px 0 0 -27px;
+            border-radius: 50%;
+            border: 3px solid #16324a;
+            display: grid;
+            place-items: center;
+            font-family: Nunito, sans-serif;
+            font-weight: 900;
+            font-size: 20px;
+            color: #16324a;
+            z-index: 2;
+            box-shadow: inset 0 -6px 0 rgba(22, 50, 74, .12), 0 4px 0 rgba(22, 50, 74, .18);
+        }
+        .bubble.long { font-size: 16px; }
+        .bubble.hinted { outline: 4px solid #fff; }
+        .shine {
+            position: absolute;
+            left: 0;
+            top: 6%;
+            width: 68%;
+            height: 82%;
+            z-index: 5;
+            pointer-events: none;
+            background: radial-gradient(circle at 46% 38%, rgba(255,255,255,.96), rgba(150,240,255,.78) 26%, rgba(70,200,255,.35) 48%, transparent 68%);
+            mix-blend-mode: screen;
+            animation: flare .4s ease-out;
+        }
+        .hero-cat { width: 104px; height: auto; flex: none; }
+        .arena::after {
+            content: "";
+            position: absolute;
+            left: 10px; right: 10px; bottom: 8px;
+            height: 10px;
+            border-radius: 8px;
+            background: #e7c99a;
+            border: 3px solid var(--line);
+            z-index: 1;
+        }
+        .steer {
+            display: flex;
+            gap: 10px;
+            flex: none;
+        }
+        .steer-btn {
+            flex: 1;
+            min-height: 68px;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 4px 0 var(--line);
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: 0;
+            touch-action: none;
+            user-select: none;
+        }
+        .steer-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--line); }
+        .bottle { position: absolute; left: 0; top: 0; width: 118px; z-index: 2; touch-action: none; }
+        .fuse { height: 8px; border-radius: 99px; background: #e5eef3; border: 2px solid var(--line); overflow: hidden; margin-bottom: 4px; }
+        .fuse > span { display: block; height: 100%; width: 100%; background: #22c55e; }
+        .glass {
+            height: 120px;
+            border-radius: 18px 18px 26px 26px;
+            border: 3px solid var(--line);
+            background: rgba(255,255,255,.78);
+            position: relative;
+            overflow: hidden;
+        }
+        .liquid { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; }
+        .tag {
+            position: relative;
+            z-index: 1;
+            margin: 16px 8px 0;
+            background: #fff;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+            text-align: center;
+            padding: 2px 4px 4px;
+        }
+        .tag b { display: block; font-size: 36px; line-height: 1.1; }
+        .tag small { font-weight: 800; color: var(--muted); font-size: 11px; }
+        .bottle.shatter .glass { animation: crack .35s linear; }
+        .bins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .bin {
+            min-height: 74px;
+            background: var(--bin);
+            border-radius: 18px;
+            box-shadow: 0 5px 0 var(--line);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            touch-action: manipulation;
+        }
+        .bin .sym { font-size: 30px; }
+        .bin .sym.long { font-size: 24px; }
+        .bin.good { outline: 4px solid #16a34a; }
+        .bin.bad { outline: 4px solid #dc2626; }
+        .bin.hint { animation: pulse .7s ease infinite; }
+        .keycap { display: none; position: absolute; top: 4px; left: 6px; font-size: 11px; font-weight: 900; }
+        .kbhint { display: none; margin: 0; text-align: center; font-size: 12px; font-weight: 800; color: var(--muted); }
+        .boom {
+            position: absolute;
+            left: 4%;
+            top: 2%;
+            width: 58%;
+            height: 42%;
+            z-index: 6;
+            display: grid;
+            place-items: center;
+            font-size: 64px;
+            pointer-events: none;
+            animation: flare .35s ease-out;
+        }
+        .board { position: relative; flex: 1; min-height: 240px; touch-action: none; }
+        .board.lockscene {
+            border-radius: 18px;
+            border: 3px solid var(--line);
+            overflow: hidden;
+            background: #d7e4ee url("assets/lock/locked.jpg") center / cover no-repeat;
+        }
+        .board.lockscene.open { background-image: url("assets/lock/open.jpg"); }
+        .board.lockscene.open .key,
+        .board.lockscene.open svg { visibility: hidden; }
+        .board svg { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: visible; }
+        .key {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 0 var(--line);
+            z-index: 1;
+            background: #fff;
+            line-height: 1;
+        }
+        .key .sym { font-size: 22px; }
+        .key small { font-size: 10px; font-weight: 800; }
+        .key.on { background: #16324a; color: #fff; }
+        .key.badflash { background: #fecaca; }
+        .key.hint { outline: 4px solid #f0b429; }
+        .director { display: flex; gap: 8px; align-items: flex-start; }
+        .avatar {
+            flex: none; width: 42px; height: 42px; display: grid; place-items: center;
+            border-radius: 14px; border: 3px solid var(--line); background: #fff; font-size: 22px;
+        }
+        .director p { margin: 0; font-weight: 800; line-height: 1.4; }
+        .mixscene {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1200 / 894;
+            border-radius: 18px;
+            border: 3px solid var(--line);
+            overflow: hidden;
+            background: #d5eef6 url("assets/mix/scene.jpg") center / 100% 100% no-repeat;
+        }
+        .mixscene.good { background-image: url("assets/mix/good.jpg"); }
+        .mixscene.bad { background-image: url("assets/mix/bad.jpg"); }
+        .mixscene.good .shelf, .mixscene.good .flaskhold,
+        .mixscene.bad .shelf, .mixscene.bad .flaskhold { visibility: hidden; }
+        .flaskhold {
+            position: absolute;
+            left: 28%;
+            top: 73%;
+            width: 24%;
+            height: 14%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-content: center;
+            justify-content: center;
+            z-index: 3;
+        }
+        .flaskhold .chip {
+            padding: 1px 4px;
+            border-radius: 6px;
+            border-width: 2px;
+            background: #fff;
+            color: #16324a;
+            font-size: clamp(10px, 2.4vw, 15px);
+            line-height: 1.2;
+        }
+        .shelf { position: absolute; inset: 0; pointer-events: none; }
+        .shelf .bottle { pointer-events: auto; }
+        .mixscene .bottle {
+            position: absolute;
+            width: 8.6%;
+            height: 16.2%;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            min-height: 0;
+        }
+        .mixscene .bottle .cap {
+            position: absolute;
+            left: 30%;
+            top: 0;
+            width: 40%;
+            height: 14%;
+            border-radius: 3px 3px 1px 1px;
+            border: 2px solid #243044;
+        }
+        .mixscene .bottle .juice {
+            position: absolute;
+            left: 16%;
+            top: 12%;
+            width: 68%;
+            height: 84%;
+            border-radius: 6px 6px 9px 9px;
+            border: 2px solid #243044;
+            box-shadow: 0 0 10px rgba(255, 214, 90, .75);
+        }
+        .mixscene .bottle .sym {
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            bottom: 12%;
+            background: #fff;
+            color: #16324a;
+            border: 2px solid #243044;
+            border-radius: 3px;
+            font-size: clamp(11px, 2.7vw, 18px);
+            line-height: 1.15;
+            padding: 1px 0 2px;
+            text-align: center;
+        }
+        .mixscene .bottle .sym.long { font-size: clamp(9px, 2.1vw, 14px); }
+        .mixscene .bottle.on .juice { box-shadow: 0 0 0 3px #ffe14a, 0 0 16px #fff6a0; }
+        .mixscene .bottle.on .sym { background: #16324a; color: #fff; }
+        .mixscene .bottle .qty {
+            position: absolute;
+            right: 0;
+            top: 0;
+            min-width: 18px;
+            padding: 0 3px;
+            border-radius: 999px;
+            background: #16324a;
+            color: #fff;
+            font-size: 11px;
+            line-height: 16px;
+            text-align: center;
+            z-index: 2;
+        }
+        .mixscene .bottle .qty[hidden] { display: none; }
+        .dish-empty { font-weight: 800; color: #5d8f86; }
+        .chip { padding: 6px 10px; border-radius: 999px; background: #16324a; color: #fff; }
+        .cardface {
+            width: 100%;
+            min-height: 230px;
+            border-radius: 28px;
+            border: 4px solid var(--line);
+            background: #fff;
+            box-shadow: 0 8px 0 #9fd6ee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .cardface strong {
+            font-size: 72px;
+            line-height: 1;
+            font-family: Nunito, "Noto Sans TC", "PingFang HK", "Microsoft JhengHei", sans-serif;
+        }
+        .cardface em { font-style: normal; font-weight: 800; color: var(--muted); }
+        .cardface.back { background: #16324a; color: #fff; box-shadow: 0 8px 0 #0f6e86; }
+        .cardface.back em { color: #d5e7ef; }
+        .row2 { display: flex; gap: 8px; }
+        .row2 button { flex: 1; padding: 12px 8px; box-shadow: 0 4px 0 var(--line); }
+        .tabs { display: flex; gap: 8px; }
+        .tabs button { flex: 1; padding: 8px; box-shadow: none; }
+        .tabs button.on { background: #16324a; color: #fff; }
+        .sheet-row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 14px;
+            background: #fff;
+            margin-bottom: 8px;
+        }
+        .sheet-row b { font-family: Nunito, sans-serif; font-size: 22px; }
+        .player {
+            width: 100%;
+            text-align: left;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 0 #d5e0e8;
+        }
+        .player.on { background: #e5f6ff; }
+        .danger { background: #fff1f1; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 14px;
+            border: 3px solid var(--line);
+            background: #fff;
+            font-weight: 800;
+        }
+        .stars { font-size: 28px; letter-spacing: 4px; margin: 0; }
+        .bigsym { font-family: Nunito, sans-serif; font-size: 64px; text-align: center; margin: 0; }
+        #toast[hidden], #modal[hidden], #ghost[hidden] { display: none !important; }
+        #toast {
+            position: fixed;
+            z-index: 40;
+            left: 50%;
+            top: calc(12px + env(safe-area-inset-top));
+            transform: translateX(-50%);
+            width: min(420px, calc(100% - 24px));
+            background: #16324a;
+            color: #fff;
+            border-radius: 16px;
+            padding: 12px 14px;
+            font-weight: 800;
+            line-height: 1.4;
+            text-align: center;
+        }
+        #modal {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            background: rgba(22, 50, 74, .45);
+            display: grid;
+            place-items: center;
+            padding: 18px;
+        }
+        .sheet {
+            width: min(440px, 100%);
+            max-height: min(86dvh, 720px);
+            overflow: auto;
+            background: var(--paper);
+            border: 4px solid var(--line);
+            border-radius: 28px;
+            padding: 18px;
+            box-shadow: 0 12px 0 rgba(22, 50, 74, .15);
+        }
+        .sheet .ghost, .sheet .primary { margin-top: 8px; }
+        #ghost {
+            position: fixed;
+            z-index: 25;
+            transform: translate(-50%, -50%);
+            min-width: 64px;
+            height: 64px;
+            padding: 0 10px;
+            display: grid;
+            place-items: center;
+            background: #16324a;
+            color: #fff;
+            border-radius: 16px;
+            font-family: Nunito, sans-serif;
+            font-weight: 900;
+            font-size: 24px;
+            pointer-events: none;
+        }
+        .shop-item { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .shop-item .ico {
+            width: 48px; height: 48px; flex: none; display: grid; place-items: center;
+            border-radius: 14px; border: 3px solid var(--line); background: #fff; font-size: 24px;
+        }
+        .shop-item p { margin: 2px 0 0; color: var(--muted); font-weight: 700; font-size: 13px; }
+        .shop-item button { margin-left: auto; padding: 8px 10px; white-space: nowrap; }
+        @keyframes pulse { 50% { transform: translateY(-4px); } }
+        @keyframes bob { 50% { transform: translateY(-5px); } }
+        @keyframes aimglow { 50% { opacity: .45; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 12px #fff6a0); } }
+        @keyframes flare { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
+        @keyframes crack {
+            40% { transform: rotate(8deg) scale(.92); }
+            100% { transform: rotate(-6deg) scale(.8); opacity: .35; }
+        }
+        @keyframes shake {
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .shake { animation: shake .35s linear; }
+        @media (hover: hover) and (pointer: fine) {
+            .kbhint, .keycap { display: block; }
+        }
+        @media (max-height: 520px) {
+            .bin { min-height: 58px; }
+            .bin .sym { font-size: 24px; }
+            .glass { height: 100px; }
+            .tag b { font-size: 30px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header id="hud">
+            <button id="back-btn" type="button" hidden aria-label="返回">←</button>
+            <button id="player-btn" type="button"><b id="hud-player">見習生</b><small id="hud-rank">見習生</small></button>
+            <button id="points-btn" type="button" aria-label="積分和商店">⭐ <b id="hud-points">0</b></button>
+            <button id="sound-btn" type="button" aria-label="音效">🔊</button>
+        </header>
+        <main id="view"></main>
+    </div>
+    <div id="toast" role="status" hidden></div>
+    <div id="modal" hidden></div>
+    <div id="ghost" hidden></div>
+    <noscript><p style="padding:16px;font-weight:800">請啟用 JavaScript 才能玩這個遊戲。</p></noscript>
+    <script>
+const KEY = "mbc-element-apprentice-v1";
+const GOAL = 15;
+const ELEMENTS = [
+    { z: 1, sym: "H", zh: "氫", en: "Hydrogen" },
+    { z: 2, sym: "He", zh: "氦", en: "Helium" },
+    { z: 3, sym: "Li", zh: "鋰", en: "Lithium", reactive: true },
+    { z: 4, sym: "Be", zh: "鈹", en: "Beryllium" },
+    { z: 5, sym: "B", zh: "硼", en: "Boron" },
+    { z: 6, sym: "C", zh: "碳", en: "Carbon" },
+    { z: 7, sym: "N", zh: "氮", en: "Nitrogen" },
+    { z: 8, sym: "O", zh: "氧", en: "Oxygen" },
+    { z: 9, sym: "F", zh: "氟", en: "Fluorine" },
+    { z: 10, sym: "Ne", zh: "氖", en: "Neon" },
+    { z: 11, sym: "Na", zh: "鈉", en: "Sodium", reactive: true },
+    { z: 12, sym: "Mg", zh: "鎂", en: "Magnesium" },
+    { z: 13, sym: "Al", zh: "鋁", en: "Aluminium" },
+    { z: 14, sym: "Si", zh: "矽", en: "Silicon" },
+    { z: 15, sym: "P", zh: "磷", en: "Phosphorus" },
+    { z: 16, sym: "S", zh: "硫", en: "Sulphur" },
+    { z: 17, sym: "Cl", zh: "氯", en: "Chlorine" },
+    { z: 18, sym: "Ar", zh: "氬", en: "Argon" },
+    { z: 19, sym: "K", zh: "鉀", en: "Potassium", reactive: true },
+    { z: 20, sym: "Ca", zh: "鈣", en: "Calcium" }
+];
+const CAT = {
+    H: "非金屬", He: "惰性氣體", Li: "鹼金屬", Be: "鹼土金屬", B: "類金屬",
+    C: "非金屬", N: "非金屬", O: "非金屬", F: "鹵素", Ne: "惰性氣體",
+    Na: "鹼金屬", Mg: "鹼土金屬", Al: "金屬", Si: "類金屬", P: "非金屬",
+    S: "非金屬", Cl: "鹵素", Ar: "惰性氣體", K: "鹼金屬", Ca: "鹼土金屬"
+};
+const CONF = {
+    H: ["He", "Li", "N"], He: ["H", "Ne", "Be"], Li: ["Na", "K", "Be"],
+    Be: ["B", "Li", "Mg", "Ba"], B: ["Be", "C", "Br", "P"], C: ["Ca", "Cl", "Si", "S"],
+    N: ["Na", "Ne", "Ni", "H"], O: ["F", "S", "N", "C"], F: ["Cl", "Fe", "O", "B"],
+    Ne: ["Na", "He", "N", "Ar"], Na: ["Ne", "N", "Mg", "K"], Mg: ["Mn", "Na", "Al", "Ca"],
+    Al: ["Ar", "Si", "Mg", "Cl"], Si: ["S", "Al", "C", "P"], P: ["Po", "K", "S", "B"],
+    S: ["Si", "P", "O", "Ca"], Cl: ["C", "Ca", "F", "K"], Ar: ["Al", "Ne", "K", "Cl"],
+    K: ["P", "Ca", "Na", "Po"], Ca: ["C", "Cl", "K", "Cu"]
+};
+const FAKES = { Po: "釙", Br: "溴", Ba: "鋇", Ni: "鎳", Fe: "鐵", Mn: "錳", Cu: "銅" };
+const LIQUID = ["#7ec8e3","#c4b5fd","#f9a8d4","#86efac","#fde047","#fdba74","#93c5fd","#67e8f9","#fca5a5","#a5b4fc","#fb7185","#6ee7b7","#cbd5e1","#fcd34d","#f472b6","#facc15","#86efac","#ddd6fe","#fb923c","#e7e5e4"];
+const BIN_COLORS = ["#ffb199", "#8eecd8", "#ffe08a", "#d4c4fb"];
+const BUBBLE_COLORS = ["#8eecc0", "#ff9b9b", "#ffc56e", "#8fd4ff", "#e7c4ff", "#ffe08a"];
+const GEAR = [
+    { id: "rack", name: "試管架", icon: "🧪", price: 80, blurb: "用過的試管先放回架上，不要橫放在桌邊。" },
+    { id: "burner", name: "本生燈", icon: "🔥", price: 160, blurb: "人離開就要關火。剛加熱的玻璃看起來和冷的一樣。" },
+    { id: "hood", name: "通風櫥", icon: "🪟", price: 320, blurb: "會揮發或有氣味的藥品，要在通風櫥裡處理。" },
+    { id: "balance", name: "電子天平", icon: "⚖️", price: 480, blurb: "稱量前先歸零，藥品不要直接放在秤盤上。" },
+    { id: "spin", name: "離心機", icon: "🌀", price: 700, blurb: "離心管要對稱配平，機器停定才可以開蓋。" }
+];
+const RANKS = [
+    { id: "trainee", name: "見習生" },
+    { id: "assistant", name: "助理員", earned: 300, acc: 0.7, n: 20 },
+    { id: "tech", name: "技術員", earned: 900, acc: 0.85, n: 40, mastered: 10 },
+    { id: "chief", name: "首席科學家", earned: 1800, acc: 0.95, n: 60, mastered: 20 }
+];
+const TIPS = [
+    "永遠將酸緩慢加入水中，切勿將水加入酸中。",
+    "剛加熱過的玻璃和外觀冷的玻璃幾乎一樣，請用鑷子或隔热手套拿取。",
+    "進入實驗室必須配戴護目鏡，長髮要紮起。",
+    "不要把鼻子湊過去嗅聞。應用手把氣體輕輕撥向鼻子。",
+    "實驗室裡不可以飲食，離開前一定要洗手。",
+    "標籤要朝外。看不清楚就不要使用，並告訴老師。",
+    "破損玻璃放入指定回收箱，不可丟進普通垃圾桶。",
+    "發生洩漏、割傷或濺到皮膚，要立刻通知老師。",
+    "鈉和鉀遇水會激烈反應，必須按老師指示取用。",
+    "試管加熱時，管口不可指向自己或同學。"
+];
+const RECIPES = [
+    { name: "水", formula: "H₂O", elements: ["H", "H", "O"], tip: "水是 H₂O：氫 H 兩個，氧 O 一個。" },
+    { name: "二氧化碳", formula: "CO₂", elements: ["C", "O", "O"], tip: "二氧化碳是 CO₂：碳 C 一個，氧 O 兩個。" },
+    { name: "食鹽", formula: "NaCl", elements: ["Na", "Cl"], tip: "食鹽 NaCl 各一個。鈉是 Na，不是 N（氮）或 Ne（氖）。" },
+    { name: "氨", formula: "NH₃", elements: ["N", "H", "H", "H"], tip: "氨是 NH₃：氮 N 一個，氫 H 三個。氮是 N，氖是 Ne。" },
+    { name: "甲烷", formula: "CH₄", elements: ["C", "H", "H", "H", "H"], tip: "甲烷是 CH₄：碳 C 一個，氫 H 四個。" },
+    { name: "氯化氫", formula: "HCl", elements: ["H", "Cl"], tip: "氯化氫 HCl 各一個。溶於水就是鹽酸。要把酸加入水中。" },
+    { name: "氯化鉀", formula: "KCl", elements: ["K", "Cl"], tip: "氯化鉀 KCl 各一個。鉀的符號是 K，磷才是 P。" },
+    { name: "氧化鎂", formula: "MgO", elements: ["Mg", "O"], tip: "氧化鎂 MgO 各一個。鎂是 Mg。Mn 是錳，不在前 20 個元素裡。" },
+    { name: "二氧化硫", formula: "SO₂", elements: ["S", "O", "O"], tip: "二氧化硫是 SO₂：硫 S 一個，氧 O 兩個。硫是 S，矽是 Si。" },
+    { name: "氟化鈣", formula: "CaF₂", elements: ["Ca", "F", "F"], tip: "氟化鈣是 CaF₂：鈣 Ca 一個，氟 F 兩個。鈣不是 C。" },
+    { name: "碳酸鈣", formula: "CaCO₃", elements: ["Ca", "C", "O", "O", "O"], tip: "碳酸鈣是 CaCO₃：鈣 Ca 一個，碳 C 一個，氧 O 三個。" },
+    { name: "氫氧化鈉", formula: "NaOH", elements: ["Na", "O", "H"], tip: "氫氧化鈉 NaOH 各一個。這是強鹼，必須戴護目鏡。" },
+    { name: "葡萄糖", formula: "C₆H₁₂O₆", elements: ["C", "C", "C", "C", "C", "C", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H", "H", "O", "O", "O", "O", "O", "O"], tip: "葡萄糖是 C₆H₁₂O₆：碳 6 個，氫 12 個，氧 6 個。" }
+];
+const LOCK_LEVELS = [
+    { id: 1, from: 1, to: 10, time: 70, prompt: "full", hide: 0, title: "第 1 關 · 氫到氖" },
+    { id: 2, from: 1, to: 10, time: 55, prompt: "name", hide: 0, title: "第 2 關 · 看名稱找符號" },
+    { id: 3, from: 1, to: 20, time: 120, prompt: "z", hide: 0, title: "第 3 關 · 看原子序" },
+    { id: 4, from: 1, to: 20, time: 100, prompt: "none", hide: 0, title: "第 4 關 · 依序連接" },
+    { id: 5, from: 1, to: 20, time: 110, prompt: "none", hide: 8, title: "第 5 關 · 隱藏部分符號" }
+];
+const MIX_LEVELS = [
+    { id: 1, time: 26, showFormula: true, tiles: 8, title: "第 1 關 · 常見物質", recipes: ["水", "二氧化碳", "食鹽", "氨"] },
+    { id: 2, time: 20, showFormula: true, tiles: 8, title: "第 2 關 · 易混符號", recipes: ["甲烷", "氯化氫", "氯化鉀", "氧化鎂", "二氧化硫"] },
+    { id: 3, time: 24, showFormula: false, tiles: 12, title: "第 3 關 · 只看名稱", recipes: ["食鹽", "氟化鈣", "碳酸鈣", "氫氧化鈉", "葡萄糖"] }
+];
+
+let root = { sound: true, current: "", profiles: {} };
+let screen = "home";
+let session = null;
+let rafId = 0;
+let intervalId = 0;
+let audioCtx = null;
+const pendingTimers = new Set();
+const toastQueue = [];
+let toastOn = false;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const $ = (id) => document.getElementById(id);
+const view = () => $("view");
+
+function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+}
+function shuffle(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+function today() {
+    const d = new Date();
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+function later(fn, ms) {
+    const id = setTimeout(() => {
+        pendingTimers.delete(id);
+        fn();
+    }, ms);
+    pendingTimers.add(id);
+    return id;
+}
+function blankProfile(name) {
+    return {
+        name, points: 0, earned: 0, attempts: 0, correct: 0, streak: 0, bestStreak: 0,
+        perElement: {}, gear: {}, ppe: { goggles: false, gloves: false, coat: "white" },
+        known: {}, best: { sort: 0, lock: 0, mix: 0 }, history: [],
+        sortCleared: 0, lockCleared: 0, mixCleared: 0,
+        daily: { date: today(), n: 0 }, seenIntro: false, highestRank: "trainee"
+    };
+}
+function normalizeProfile(p) {
+    const b = blankProfile(p.name || "見習生");
+    Object.keys(b).forEach((k) => { if (p[k] == null) p[k] = b[k]; });
+    p.ppe = Object.assign({ goggles: false, gloves: false, coat: "white" }, p.ppe || {});
+    p.best = Object.assign({ sort: 0, lock: 0, mix: 0 }, p.best || {});
+    p.gear = p.gear || {};
+    p.perElement = p.perElement || {};
+    p.known = p.known || {};
+    p.history = p.history || [];
+    freshDaily(p);
+}
+function freshDaily(p) {
+    const d = today();
+    if (!p.daily || p.daily.date !== d) p.daily = { date: d, n: 0 };
+}
+function load() {
+    try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) {
+            const data = JSON.parse(raw);
+            if (data && data.profiles) root = data;
+        }
+    } catch (e) { /* keep defaults */ }
+    if (!root.profiles || !Object.keys(root.profiles).length) {
+        root = { sound: true, current: "p1", profiles: { p1: blankProfile("見習生") } };
+    }
+    if (typeof root.sound !== "boolean") root.sound = true;
+    if (!root.profiles[root.current]) root.current = Object.keys(root.profiles)[0];
+    Object.values(root.profiles).forEach(normalizeProfile);
+}
+function profile() { return root.profiles[root.current]; }
+function saveAll() {
+    try { localStorage.setItem(KEY, JSON.stringify(root)); } catch (e) { /* private mode */ }
+    renderHud();
+}
+function recentAcc(p) {
+    const h = p.history || [];
+    if (!h.length) return 0;
+    return h.reduce((sum, n) => sum + n, 0) / h.length;
+}
+function masteredCount(p) {
+    return ELEMENTS.filter((e) => {
+        const s = p.perElement[e.z];
+        if (!s) return false;
+        const n = s.ok + s.bad;
+        return n >= 2 && s.ok / n >= 0.95;
+    }).length;
+}
+function qualify(p) {
+    const acc = recentAcc(p);
+    const n = (p.history || []).length;
+    const m = masteredCount(p);
+    let best = RANKS[0];
+    RANKS.slice(1).forEach((cand) => {
+        if (p.earned < cand.earned || acc < cand.acc || n < cand.n) return;
+        if ((cand.mastered || 0) > m) return;
+        best = cand;
+    });
+    return best;
+}
+function syncRank() {
+    const p = profile();
+    const order = RANKS.map((r) => r.id);
+    const q = qualify(p);
+    if (order.indexOf(q.id) > order.indexOf(p.highestRank || "trainee")) p.highestRank = q.id;
+    return RANKS.find((r) => r.id === (p.highestRank || "trainee"));
+}
+function nextNeed(p) {
+    const cur = RANKS.find((r) => r.id === (p.highestRank || "trainee"));
+    const i = RANKS.indexOf(cur);
+    if (i === RANKS.length - 1) return "你已經是首席科學家。繼續保持 20 個元素都熟練。";
+    const nxt = RANKS[i + 1];
+    const bits = [
+        `累積 ${nxt.earned} 分（現在 ${p.earned}）`,
+        `最近正確率 ${Math.round(nxt.acc * 100)}%（現在 ${Math.round(recentAcc(p) * 100)}%）`,
+        `至少作答 ${nxt.n} 題（現在 ${(p.history || []).length}）`
+    ];
+    if (nxt.mastered) bits.push(`熟練 ${nxt.mastered}/20（現在 ${masteredCount(p)}）`);
+    return `下一職級：${nxt.name}。需要${bits.join("、")}。`;
+}
+function cellClass(z) {
+    const s = profile().perElement[z];
+    if (!s || !(s.ok + s.bad)) return "none";
+    const n = s.ok + s.bad;
+    const a = s.ok / n;
+    if (n < 2) return a >= 0.5 ? "mid" : "low";
+    if (a >= 0.95) return "good";
+    if (a >= 0.7) return "mid";
+    return "low";
+}
+function coatOf(p) {
+    if ((p.highestRank || "") === "chief") return "#f0b429";
+    if (p.ppe.coat === "blue") return "#3b82c4";
+    return "#f4f8fb";
+}
+function checkUnlocks(p) {
+    const msgs = [];
+    if (p.bestStreak >= 20 && !p.ppe.goggles) {
+        p.ppe.goggles = true;
+        msgs.push("連續正確 20 次，解鎖護目鏡。進實驗室前記得戴上。");
+    }
+    if (p.bestStreak >= 35 && !p.ppe.gloves) {
+        p.ppe.gloves = true;
+        msgs.push("連續正確 35 次，解鎖耐酸鹼手套。");
+    }
+    if (p.bestStreak >= 50 && p.ppe.coat !== "blue") {
+        p.ppe.coat = "blue";
+        msgs.push("連續正確 50 次，解鎖藍色實驗袍。");
+    }
+    return msgs;
+}
+function remember(z, ok) {
+    const p = profile();
+    freshDaily(p);
+    const stat = p.perElement[z] || (p.perElement[z] = { ok: 0, bad: 0 });
+    p.attempts++;
+    p.history = p.history || [];
+    p.history.push(ok ? 1 : 0);
+    if (p.history.length > 60) p.history.shift();
+    if (ok) {
+        p.correct++;
+        stat.ok++;
+        p.daily.n++;
+        p.streak++;
+        if (p.streak > p.bestStreak) p.bestStreak = p.streak;
+    } else {
+        stat.bad++;
+        p.streak = 0;
+    }
+    return checkUnlocks(p);
+}
+function addScore(n) {
+    const p = profile();
+    const before = p.highestRank || "trainee";
+    if (n) {
+        p.points += n;
+        p.earned += n;
+    }
+    const now = syncRank();
+    saveAll();
+    return now.id !== before ? now : null;
+}
+function surface(notices, rank) {
+    if (rank) toast("晉升為" + rank.name + "！");
+    (notices || []).forEach((m) => toast(m));
+    if (!session) return;
+    if (rank) session.rankUp = rank.name;
+    if (notices && notices.length) session.notices.push(...notices);
+}
+function elementBySym(sym) { return ELEMENTS.find((e) => e.sym === sym); }
+function explainMiss(el, picked) {
+    const head = el.reactive ? `${el.zh}是活潑金屬，標錯很危險。` : "";
+    if (!picked) return `${head || "太慢了，瓶子跌碎。"}${el.zh}的符號是 ${el.sym}。`;
+    if (FAKES[picked]) return `${picked}是${FAKES[picked]}，不在前 20 個。${head}${el.zh}的符號是 ${el.sym}。`;
+    const other = elementBySym(picked);
+    if (other) return `${head}這瓶是${el.zh}，符號是 ${el.sym}。${picked} 是${other.zh}。`;
+    return `${head}${el.zh}的符號是 ${el.sym}。`;
+}
+function wrongLine(w) {
+    if (!w.picked) return `${w.zh} → ${w.sym}（瓶子跌碎了）`;
+    if (FAKES[w.picked]) return `${w.zh} → ${w.sym}（${w.picked} 是${FAKES[w.picked]}）`;
+    const other = elementBySym(w.picked);
+    return other ? `${w.zh} → ${w.sym}（不是 ${w.picked} ${other.zh}）` : `${w.name || w.zh} → ${w.formula || w.sym}`;
+}
+
+function unlockAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+}
+function tone(freq, dur, type, vol) {
+    if (!root.sound || !audioCtx) return;
+    try {
+        const t = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type || "sine";
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(vol || 0.05, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(t);
+        o.stop(t + dur);
+    } catch (e) { /* ignore audio errors */ }
+}
+function sOk() { tone(660, 0.07, "sine", 0.05); setTimeout(() => tone(880, 0.09, "sine", 0.04), 70); }
+function sBad() { tone(180, 0.16, "square", 0.035); }
+function sWin() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.12, "triangle", 0.05), i * 90)); }
+function buzz(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+function toast(msg, ms) {
+    toastQueue.push({ msg, ms: ms || 2400 });
+    pumpToast();
+}
+function pumpToast() {
+    if (toastOn || !toastQueue.length) return;
+    toastOn = true;
+    const item = toastQueue.shift();
+    const t = $("toast");
+    t.textContent = item.msg;
+    t.hidden = false;
+    setTimeout(() => {
+        t.hidden = true;
+        toastOn = false;
+        pumpToast();
+    }, item.ms);
+}
+function closeModal() {
+    const m = $("modal");
+    m.hidden = true;
+    m.innerHTML = "";
+    m.onclick = null;
+}
+function modal(html, bind, backdrop) {
+    const m = $("modal");
+    m.hidden = false;
+    m.innerHTML = `<div class="sheet">${html}</div>`;
+    m.onclick = backdrop ? (e) => { if (e.target === m) closeModal(); } : null;
+    if (bind) bind(m);
+}
+function renderHud() {
+    const p = profile();
+    const rank = RANKS.find((r) => r.id === (p.highestRank || "trainee"));
+    $("hud-player").textContent = p.name;
+    $("hud-rank").textContent = rank.name + " · 連續 " + p.streak;
+    $("hud-points").textContent = String(p.points);
+    $("sound-btn").textContent = root.sound ? "🔊" : "🔇";
+    $("sound-btn").setAttribute("aria-label", root.sound ? "關閉音效" : "開啟音效");
+    $("back-btn").hidden = screen === "home";
+}
+function setPlay(on) {
+    const v = view();
+    v.classList.toggle("play", !!on);
+    if (!on) v.style.overflow = "";
+}
+function stopLoops() {
+    pendingTimers.forEach((id) => clearTimeout(id));
+    pendingTimers.clear();
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+    if (intervalId) clearInterval(intervalId);
+    intervalId = 0;
+    session = null;
+    setPlay(false);
+}
+function shakeApp() {
+    if (reduceMotion) return;
+    const app = $("app");
+    app.classList.remove("shake");
+    void app.offsetWidth;
+    app.classList.add("shake");
+    later(() => app.classList.remove("shake"), 360);
+}
+function starsText(n) {
+    return "★★★☆☆☆".slice(3 - n, 6 - n);
+}
+function onBack() {
+    if (session && !session.over) { openPause(); return; }
+    if (screen !== "home") showHome();
+}
+function openPause() {
+        if (!session || session.over || session.paused) return;
+        session.paused = true;
+        session.steer = 0;
+    modal(`
+        <h2>暫停</h2>
+        <p class="how">休息一下。這關的進度還在。</p>
+        <button class="primary" id="resume" type="button">繼續</button>
+        <button class="ghost" id="quit" type="button">離開本關</button>
+    `, (m) => {
+        m.querySelector("#resume").onclick = () => {
+            closeModal();
+            if (!session) return;
+            session.paused = false;
+            session.lastTs = performance.now();
+            session.lastTick = Date.now();
+        };
+        m.querySelector("#quit").onclick = () => {
+            closeModal();
+            stopLoops();
+            showHome();
+        };
+    }, false);
+}
+
+function showHome() {
+    stopLoops();
+    closeModal();
+    screen = "home";
+    const p = profile();
+    freshDaily(p);
+    const before = p.highestRank;
+    syncRank();
+    if (p.highestRank !== before) saveAll();
+    else renderHud();
+    const rank = RANKS.find((r) => r.id === (p.highestRank || "trainee"));
+    const daily = Math.min(GOAL, p.daily.n || 0);
+    const v = view();
+    v.scrollTop = 0;
+    v.innerHTML = `
+        <div class="wrap">
+            <section class="cardbox hero">
+                <img class="hero-cat" src="assets/catcher/ready.png?v=2" alt="拿着錐形瓶的實驗室貓">
+                <div class="hero-copy">
+                    <b>${esc(p.name)}</b>
+                    <span>${esc(rank.name)} · 熟練 ${masteredCount(p)}/20</span>
+                    <small>護目鏡 ${p.ppe.goggles ? "已備" : "連續 20 次解鎖"} · 手套 ${p.ppe.gloves ? "已備" : "連續 35 次解鎖"}</small>
+                    <div class="shelf">${GEAR.map((g) => `<i class="${p.gear[g.id] ? "" : "off"}" title="${esc(g.name)}">${g.icon}</i>`).join("")}</div>
+                </div>
+            </section>
+            <section class="cardbox">
+                <p class="kicker">今日目標 ${daily}/${GOAL}</p>
+                <div class="bar" aria-hidden="true"><span style="width:${daily / GOAL * 100}%"></span></div>
+                <p class="how" style="margin-top:8px">${esc(nextNeed(p))}</p>
+            </section>
+            <button class="mode" id="go-cards" type="button" style="background:#fff7e8">
+                <span class="ico">🃏</span><span><b>記憶卡片</b><small>不計時。建議先把 20 個符號翻熟</small></span>
+            </button>
+            <button class="mode" id="go-sort" type="button" style="background:#e5faf6">
+                <span class="ico">🐱</span><span><b>錐形瓶接球</b><small>移動貓咪，用瓶口接住正確符號</small></span>
+            </button>
+            <button class="mode" id="go-lock" type="button" style="background:#fff4d6">
+                <span class="ico">🔐</span><span><b>危險品櫃密碼</b><small>由氫 H 到鈣 Ca，依原子序連接</small></span>
+            </button>
+            <button class="mode" id="go-mix" type="button" style="background:#f3e8ff">
+                <span class="ico">🧫</span><span><b>初級配藥師</b><small>依化學式的數量，把元素加進錐形瓶</small></span>
+            </button>
+            <section class="cardbox">
+                <p class="kicker">前 20 個元素</p>
+                <div class="grid5" id="grid"></div>
+                <div class="legend" style="margin-top:8px">
+                    <span><b style="background:#f4f7fa"></b> 未練</span>
+                    <span><b style="background:#ffd5d5"></b> 要再記</span>
+                    <span><b style="background:#fff1b8"></b> 差不多</span>
+                    <span><b style="background:#c9f5d6"></b> 熟練</span>
+                    <span>★ 卡片已記住</span>
+                </div>
+                <p class="footnote">熟練＝這個元素至少答對過 2 次，而且正確率達到 95%。</p>
+            </section>
+            <div class="links">
+                <button id="go-shop" type="button">升級實驗室</button>
+                <button id="go-players" type="button">切換玩家</button>
+            </div>
+            <button class="ghost" id="go-reset" type="button">清除這位玩家的進度</button>
+            <p class="footnote">澳門浸信中學 · 科學實驗室。進度只保存在這部裝置的瀏覽器。手機可以加入主畫面，上課時全螢幕使用。</p>
+        </div>`;
+    const grid = $("grid");
+    ELEMENTS.forEach((e) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "cell " + cellClass(e.z) + (p.known[e.z] ? " star" : "");
+        b.innerHTML = `<small>${e.z}</small><b class="sym${e.sym.length > 1 ? " long" : ""}">${e.sym}</b>`;
+        b.setAttribute("aria-label", e.z + " " + e.zh + " " + e.sym);
+        b.onclick = () => showElement(e);
+        grid.appendChild(b);
+    });
+    $("go-cards").onclick = showStudy;
+    $("go-sort").onclick = openSort;
+    $("go-lock").onclick = openLock;
+    $("go-mix").onclick = openMix;
+    $("go-shop").onclick = showShop;
+    $("go-players").onclick = showProfiles;
+    $("go-reset").onclick = confirmReset;
+    if (!p.seenIntro) showIntro();
+}
+function showIntro() {
+    modal(`
+        <p class="kicker">澳門浸信中學 · 科學實驗室</p>
+        <h2>化學見習生</h2>
+        <p class="how">你剛入職，要在實驗開始前認對試劑的元素符號。目標是前 20 個：由氫 H 到鈣 Ca。</p>
+        <p class="how">建議先翻記憶卡片，再接受限時挑戰。答錯時會立刻看到正確符號。</p>
+        <button class="primary" id="cards" type="button">先看記憶卡片</button>
+        <button class="ghost" id="ok" type="button">進入實驗室</button>
+    `, (m) => {
+        const done = (next) => {
+            profile().seenIntro = true;
+            saveAll();
+            closeModal();
+            if (next) showStudy();
+        };
+        m.querySelector("#cards").onclick = () => done(true);
+        m.querySelector("#ok").onclick = () => done(false);
+    }, false);
+}
+function showElement(e) {
+    const s = profile().perElement[e.z] || { ok: 0, bad: 0 };
+    const n = s.ok + s.bad;
+    const acc = n ? Math.round(s.ok / n * 100) + "%（" + s.ok + "/" + n + "）" : "尚未在挑戰中出現";
+    modal(`
+        <p class="kicker">原子序 ${e.z} · ${esc(CAT[e.sym])}</p>
+        <p class="bigsym">${esc(e.sym)}</p>
+        <h2 style="text-align:center">${esc(e.zh)}</h2>
+        <p class="how" style="text-align:center">${esc(e.en)}</p>
+        <p class="how" style="text-align:center">挑戰正確率：${esc(acc)}</p>
+        <button class="primary" id="ok" type="button">關閉</button>
+    `, (m) => { m.querySelector("#ok").onclick = closeModal; }, true);
+}
+function confirmReset() {
+    const p = profile();
+    modal(`
+        <h2>清除「${esc(p.name)}」？</h2>
+        <p class="how">積分、職級、熟練度和裝備都會從這部裝置移除。</p>
+        <button class="primary danger" id="yes" type="button">清除進度</button>
+        <button class="ghost" id="no" type="button">取消</button>
+    `, (m) => {
+        m.querySelector("#no").onclick = closeModal;
+        m.querySelector("#yes").onclick = () => {
+            const name = p.name;
+            root.profiles[root.current] = blankProfile(name);
+            root.profiles[root.current].seenIntro = true;
+            saveAll();
+            closeModal();
+            showHome();
+        };
+    }, false);
+}
+function showShop() {
+    screen = "shop";
+    renderHud();
+    const p = profile();
+    const v = view();
+    v.innerHTML = `<div class="wrap"><section class="cardbox"><p class="kicker">可用積分 ${p.points}</p><h2>升級實驗室</h2><p class="how">花掉的積分不會降低職級。職級看的是累積得分。</p><div id="shop"></div></section></div>`;
+    const box = $("shop");
+    GEAR.forEach((item) => {
+        const owned = !!p.gear[item.id];
+        const row = document.createElement("div");
+        row.className = "shop-item";
+        row.innerHTML = `<div class="ico">${item.icon}</div><div><b>${esc(item.name)}</b><p>${esc(item.blurb)}</p></div>`;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = owned ? "已設置" : item.price + " 分";
+        btn.disabled = owned || p.points < item.price;
+        btn.onclick = () => {
+            if (p.gear[item.id] || p.points < item.price) return;
+            p.points -= item.price;
+            p.gear[item.id] = true;
+            saveAll();
+            toast(item.blurb, 3200);
+            showShop();
+        };
+        row.appendChild(btn);
+        box.appendChild(row);
+    });
+}
+function showProfiles() {
+    screen = "profiles";
+    renderHud();
+    const v = view();
+    v.innerHTML = `<div class="wrap"><section class="cardbox"><h2>玩家</h2><p class="how">共用一部平板時，每人用自己的名字，進度就不會混在一起。</p><div id="plist"></div><form id="add-player"><input id="pname" type="text" maxlength="12" placeholder="班別學號，例如 2A12" autocomplete="off"><button class="primary" style="margin-top:8px" type="submit">新增並切換</button></form></section></div>`;
+    const list = $("plist");
+    const ids = Object.keys(root.profiles);
+    ids.forEach((id) => {
+        const item = root.profiles[id];
+        const row = document.createElement("div");
+        row.className = "player" + (id === root.current ? " on" : "");
+        const label = document.createElement("button");
+        label.type = "button";
+        label.style.border = "0";
+        label.style.boxShadow = "none";
+        label.style.background = "transparent";
+        label.style.padding = "0";
+        label.innerHTML = `<b>${esc(item.name)}</b><small style="display:block;color:#4d6478">累積 ${item.earned || 0} 分</small>`;
+        label.onclick = () => {
+            root.current = id;
+            saveAll();
+            showHome();
+        };
+        row.appendChild(label);
+        if (ids.length > 1) {
+            const del = document.createElement("button");
+            del.type = "button";
+            del.textContent = "刪除";
+            del.onclick = (e) => {
+                e.stopPropagation();
+                deleteProfile(id);
+            };
+            row.appendChild(del);
+        }
+        list.appendChild(row);
+    });
+    $("add-player").onsubmit = (e) => {
+        e.preventDefault();
+        const name = $("pname").value.trim().slice(0, 12);
+        if (!name) return;
+        if (Object.keys(root.profiles).length >= 40) { toast("玩家名單已滿，請先刪除舊名字。"); return; }
+        const id = "p" + Date.now().toString(36);
+        root.profiles[id] = blankProfile(name);
+        root.current = id;
+        saveAll();
+        showHome();
+    };
+}
+function deleteProfile(id) {
+    const name = root.profiles[id].name;
+    modal(`<h2>刪除「${esc(name)}」？</h2><p class="how">這位玩家的紀錄會從這部裝置移除。</p><button class="primary danger" id="yes" type="button">刪除</button><button class="ghost" id="no" type="button">取消</button>`, (m) => {
+        m.querySelector("#no").onclick = closeModal;
+        m.querySelector("#yes").onclick = () => {
+            delete root.profiles[id];
+            if (root.current === id) root.current = Object.keys(root.profiles)[0];
+            saveAll();
+            closeModal();
+            showProfiles();
+        };
+    }, false);
+}
+
+let study = null;
+function showStudy() {
+    screen = "study";
+    renderHud();
+    study = { tab: "card", order: shuffle(ELEMENTS), index: 0, flipped: false, onlyUnknown: false, revealed: {} };
+    paintStudy();
+}
+function studyList() {
+    if (study.onlyUnknown) return ELEMENTS.filter((e) => !profile().known[e.z]);
+    return study.order;
+}
+function paintStudy() {
+    const v = view();
+    if (study.tab === "sheet") { paintSheet(v); return; }
+    const items = studyList();
+    const known = ELEMENTS.filter((e) => profile().known[e.z]).length;
+    if (!items.length) {
+        v.innerHTML = `<div class="wrap"><div class="tabs"><button type="button" id="tab-card" class="on">閃卡</button><button type="button" id="tab-sheet">對照表</button></div><section class="cardbox"><h2>這組都標記記住了</h2><p class="how">可以改看全部，或到挑戰裡驗收。</p><button class="primary" id="all" type="button">看全部卡片</button></section></div>`;
+        $("tab-sheet").onclick = () => { study.tab = "sheet"; paintStudy(); };
+        $("all").onclick = () => { study.onlyUnknown = false; study.index = 0; paintStudy(); };
+        return;
+    }
+    if (study.index >= items.length) study.index = 0;
+    const e = items[study.index];
+    v.innerHTML = `<div class="wrap">
+        <div class="tabs"><button type="button" id="tab-card" class="on">閃卡</button><button type="button" id="tab-sheet">對照表</button></div>
+        <p class="kicker">第 ${study.index + 1} / ${items.length} · 已標記記住 ${known}/20</p>
+        <button type="button" class="cardface ${study.flipped ? "back" : ""}" id="flip">
+            <small>${study.flipped ? "符號" : "點一下翻面"}</small>
+            <strong class="sym">${study.flipped ? esc(e.sym) : esc(e.zh)}</strong>
+            <em>${study.flipped ? esc(e.zh + " · 原子序 " + e.z + " · " + CAT[e.sym]) : esc(e.en + " · 原子序 " + e.z)}</em>
+        </button>
+        <div class="row2">
+            <button type="button" id="miss">還不熟</button>
+            <button type="button" id="know">記住了</button>
+        </div>
+        <div class="row2">
+            <button type="button" class="ghost" id="unk">${study.onlyUnknown ? "看全部" : "只看還不熟"}</button>
+            <button type="button" class="ghost" id="mix">洗牌</button>
+        </div>
+    </div>`;
+    $("tab-sheet").onclick = () => { study.tab = "sheet"; paintStudy(); };
+    $("flip").onclick = () => { study.flipped = !study.flipped; paintStudy(); };
+    $("miss").onclick = () => markCard(e, false);
+    $("know").onclick = () => markCard(e, true);
+    $("unk").onclick = () => { study.onlyUnknown = !study.onlyUnknown; study.index = 0; study.flipped = false; paintStudy(); };
+    $("mix").onclick = () => { study.order = shuffle(ELEMENTS); study.index = 0; study.flipped = false; paintStudy(); };
+}
+function markCard(e, known) {
+    profile().known[e.z] = known;
+    saveAll();
+    study.index += 1;
+    study.flipped = false;
+    paintStudy();
+}
+function paintSheet(v) {
+    v.innerHTML = `<div class="wrap">
+        <div class="tabs"><button type="button" id="tab-card">閃卡</button><button type="button" id="tab-sheet" class="on">對照表</button></div>
+        <div class="row2"><button type="button" class="ghost" id="hide">全部遮住</button><button type="button" class="ghost" id="show">全部顯示</button></div>
+        <div id="rows"></div>
+    </div>`;
+    $("tab-card").onclick = () => { study.tab = "card"; paintStudy(); };
+    const rows = $("rows");
+    ELEMENTS.forEach((e) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "sheet-row";
+        const open = !!study.revealed[e.z];
+        b.innerHTML = `<span>${e.z}　${esc(e.zh)}　<small>${esc(e.en)}</small></span><b class="sym">${open ? esc(e.sym) : "··"}</b>`;
+        b.onclick = () => { study.revealed[e.z] = !study.revealed[e.z]; paintSheet(view()); };
+        rows.appendChild(b);
+    });
+    $("hide").onclick = () => { study.revealed = {}; paintSheet(view()); };
+    $("show").onclick = () => { ELEMENTS.forEach((e) => { study.revealed[e.z] = true; }); paintSheet(view()); };
+}
+
+function showBrief(opts) {
+    screen = "brief";
+    renderHud();
+    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    const v = view();
+    v.innerHTML = `<section class="panel">
+        <p class="kicker">實驗室安全提醒</p>
+        <h2 class="tip">${esc(tip)}</h2>
+        <p class="how">${esc(opts.how)}</p>
+        ${opts.allowSlow ? '<label class="check"><input id="slow" type="checkbox"> 慢速練習，多抽較不熟的元素</label>' : ""}
+        <div class="actions" id="actions"></div>
+    </section>`;
+    const box = $("actions");
+    opts.actions.forEach((a) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = a.primary ? "primary" : "ghost";
+        b.textContent = a.label;
+        b.onclick = () => {
+            const slow = !!(opts.allowSlow && $("slow") && $("slow").checked);
+            opts.onStart(a.value, slow);
+        };
+        box.appendChild(b);
+    });
+}
+function openSort() {
+    const next = (profile().sortCleared || 0) + 1;
+    const actions = [
+        { label: "練習原子序 1–10", value: 1, primary: next <= 5 },
+        { label: "加入原子序 11–20", value: 6, primary: next > 5 }
+    ];
+    if (next > 1) {
+        actions.forEach((a) => { a.primary = false; });
+        actions.unshift({ label: "繼續第 " + next + " 關", value: next, primary: true });
+    }
+    showBrief({
+        how: "畫面上會寫出元素名稱，符號從上方掉下來。用畫面底部的左右箭嘴移動貓咪，讓錐形瓶口接到正確的那一顆。接對了瓶子會發亮；接錯了瓶子會炸開。",
+        allowSlow: true,
+        actions,
+        onStart: (stage, slow) => startSort(stage, slow)
+    });
+}
+function openLock() {
+    const next = Math.min(5, (profile().lockCleared || 0) + 1);
+    const actions = [
+        { label: "第 1 關 · 氫到氖（有提示）", value: 1, primary: next === 1 },
+        { label: "第 3 關 · 前 20 個，看原子序", value: 3, primary: false },
+        { label: "第 5 關 · 隱藏部分符號", value: 5, primary: false }
+    ];
+    if (profile().lockCleared > 0) {
+        actions.forEach((a) => { a.primary = false; });
+        actions.unshift({ label: "繼續第 " + next + " 關", value: next, primary: true });
+    }
+    showBrief({
+        how: "化學品櫃的按鈕次序是亂的。請由原子序 1 開始，依序點到 20。點錯會扣時間。",
+        actions,
+        onStart: (level) => startLock(level)
+    });
+}
+function openMix() {
+    const next = Math.min(3, (profile().mixCleared || 0) + 1);
+    const actions = [
+        { label: "第 1 關 · 看名稱和化學式", value: 1, primary: next === 1 },
+        { label: "第 2 關 · 易混符號", value: 2, primary: false },
+        { label: "第 3 關 · 只看名稱", value: 3, primary: false }
+    ];
+    if (profile().mixCleared > 0) {
+        actions.forEach((a) => { a.primary = false; });
+        actions.unshift({ label: "繼續第 " + next + " 關", value: next, primary: true });
+    }
+    showBrief({
+        how: "主任會派訂單。點右邊架子上的瓶子，每點一次加一個元素。化學式的下標是幾，就要加幾次。例如二氧化碳 CO₂ 要加 1 次碳、2 次氧。點錐形瓶裡的符號可以取出一個。",
+        actions,
+        onStart: (level) => startMix(level)
+    });
+}
+
+function makeBins(el, stage) {
+    const picks = [];
+    const early = stage <= 2;
+    const allowFake = stage > 5;
+    shuffle(CONF[el.sym] || []).forEach((sym) => {
+        if (picks.length >= 3 || sym === el.sym || picks.includes(sym)) return;
+        const real = elementBySym(sym);
+        if (early && (!real || real.z > 10)) return;
+        if (!allowFake && !real) return;
+        if (!real && !FAKES[sym]) return;
+        picks.push(sym);
+    });
+    shuffle(ELEMENTS.filter((e) => e.sym !== el.sym && !picks.includes(e.sym) && (stage > 5 || e.z <= 10))).forEach((e) => {
+        if (picks.length < 3) picks.push(e.sym);
+    });
+    return shuffle([el.sym, ...picks.slice(0, 3)]);
+}
+function pickWeak(pool) {
+    const p = profile();
+    const bag = [];
+    pool.forEach((e) => {
+        const s = p.perElement[e.z];
+        const seen = s ? s.ok + s.bad : 0;
+        const acc = seen ? s.ok / seen : 0;
+        const w = seen === 0 ? 4 : 1 + Math.round((1 - acc) * 5);
+        for (let i = 0; i < w; i++) bag.push(e);
+    });
+    return bag[Math.floor(Math.random() * bag.length)];
+}
+function buildQueue(stage, slow) {
+    const pool = stage <= 5 ? ELEMENTS.filter((e) => e.z <= 10) : ELEMENTS;
+    const late = pool.filter((e) => e.z > 10);
+    const count = stage === 1 ? 6 : stage < 6 ? 8 : 10;
+    const q = [];
+    for (let i = 0; i < count; i++) {
+        let pick;
+        if (slow) pick = pickWeak(pool);
+        else if (stage > 5 && late.length && Math.random() < 0.7) pick = late[Math.floor(Math.random() * late.length)];
+        else pick = pool[Math.floor(Math.random() * pool.length)];
+        if (q.length >= 2 && q[q.length - 1].z === pick.z && q[q.length - 2].z === pick.z) {
+            pick = pool[(pool.indexOf(pick) + 1) % pool.length];
+        }
+        q.push(pick);
+    }
+    return q;
+}
+function fallSeconds(stage, slow) {
+    const base = Math.max(1.55, 5 - (Math.min(stage, 12) - 1) * 0.32);
+    return slow ? base + 2.4 : base;
+}
+function startSort(stage, slow) {
+    stopLoops();
+    screen = "sort";
+    renderHud();
+    session = {
+        mode: "sort", stage, slow: !!slow, queue: buildQueue(stage, slow), done: 0,
+        lives: 3, score: 0, combo: 0, wrongs: [], orbs: [], target: null, catX: 0,
+        lock: false, paused: false, dragging: false, steer: 0, hints: 2, over: false,
+        notices: [], hinted: false, lastTs: 0, mood: "ready"
+    };
+    session.total = session.queue.length;
+    setPlay(true);
+    view().style.overflow = "hidden";
+    view().innerHTML = `<div class="playcol fit">
+        <div class="gamebar"><span id="g-left"></span><span id="g-mid"></span><span><button type="button" class="tiny" id="hint-btn">提示</button> <button type="button" class="tiny" id="pause-btn">暫停</button></span></div>
+        <div id="feedback" class="feedback" role="status"></div>
+        <div class="arena lab" id="arena">
+            <div id="cat" class="catcher ready">
+                <div class="sprite">
+                    <img id="cat-img" src="assets/catcher/ready.png?v=2" alt="拿着錐形瓶的貓咪">
+                    <b id="caught" class="caught"></b>
+                    <i class="aim" aria-hidden="true"></i>
+                </div>
+                <div id="shine" class="shine" hidden></div>
+            </div>
+        </div>
+        <div class="steer">
+            <button type="button" class="steer-btn" data-dir="-1" aria-label="向左">◀ 左</button>
+            <button type="button" class="steer-btn" data-dir="1" aria-label="向右">右 ▶</button>
+        </div>
+        <p class="kbhint">也可以用左右方向鍵。</p>
+    </div>`;
+    $("hint-btn").onclick = useSortHint;
+    $("pause-btn").onclick = openPause;
+    document.querySelectorAll(".steer-btn").forEach((btn) => {
+        btn.addEventListener("pointerdown", onSteerDown);
+        btn.addEventListener("pointerup", onSteerUp);
+        btn.addEventListener("pointercancel", onSteerUp);
+    });
+    const arena = $("arena");
+    arena.addEventListener("pointerdown", onArenaDown, { passive: false });
+    arena.addEventListener("pointermove", onArenaMove);
+    arena.addEventListener("pointerup", endSlide);
+    arena.addEventListener("pointercancel", endSlide);
+    requestAnimationFrame(() => {
+        if (!session || session.mode !== "sort") return;
+        const cat = $("cat");
+        const w = cat.offsetWidth || 180;
+        session.catX = clampCat(arena.clientWidth / 2 - w * MOUTH.x);
+        cat.style.transform = `translateX(${session.catX}px)`;
+        spawnRound();
+        session.lastTs = performance.now();
+        rafId = requestAnimationFrame(loopSort);
+    });
+}
+function loopSort(ts) {
+    if (!session || session.mode !== "sort") return;
+    const dt = Math.min(0.05, (ts - session.lastTs) / 1000 || 0);
+    session.lastTs = ts;
+    if (!session.paused && !session.lock && session.steer) {
+        session.catX = clampCat(session.catX + session.steer * 680 * dt);
+        const cat = $("cat");
+        if (cat) cat.style.transform = `translateX(${session.catX}px)`;
+    }
+    if (!session.paused && !session.lock && session.orbs.length) {
+        const flask = flaskPoint();
+        const floor = $("arena").clientHeight + 24;
+        for (const orb of session.orbs) {
+            if (orb.gone) continue;
+            orb.y += orb.speed * dt;
+            if (flask && Math.hypot(orb.x - flask.x, orb.y - flask.y) < flask.r) {
+                catchOrb(orb);
+                break;
+            }
+            if (orb.y > floor) {
+                orb.gone = true;
+                orb.node.remove();
+                if (orb.sym === session.target.sym) {
+                    onMiss();
+                    break;
+                }
+            }
+        }
+        placeOrbs();
+    }
+    if (!session || session.mode !== "sort") return;
+    rafId = requestAnimationFrame(loopSort);
+}
+function spawnRound() {
+    if (!session) return;
+    if (!session.queue.length) { finishSort(true); return; }
+    const element = session.queue.shift();
+    const arena = $("arena");
+    const symbols = makeBins(element, session.stage);
+    const fall = fallSeconds(session.stage, session.slow);
+    session.target = element;
+    session.lock = false;
+    session.hinted = false;
+    setMood("ready");
+    const caught = $("caught");
+    if (caught) {
+        caught.textContent = element.zh;
+        caught.classList.toggle("long", element.zh.length > 1);
+    }
+    const shine = $("shine");
+    if (shine) shine.hidden = true;
+    arena.querySelectorAll(".bubble").forEach((node) => node.remove());
+    const lanes = shuffle(symbols.map((_, i) => (i + 0.5) * (arena.clientWidth / symbols.length)));
+    session.orbs = symbols.map((sym, i) => {
+        const node = document.createElement("div");
+        node.className = "bubble" + (sym.length > 1 ? " long" : "");
+        node.textContent = sym;
+        node.style.background = BUBBLE_COLORS[i % BUBBLE_COLORS.length];
+        arena.appendChild(node);
+        return {
+            sym,
+            node,
+            x: lanes[i],
+            y: -36 - i * 78,
+            speed: (arena.clientHeight + 120) / fall,
+            gone: false
+        };
+    });
+    placeOrbs();
+    setFeedback(session.done === 0 && session.stage === 1
+        ? `用下方箭嘴移動貓咪，用瓶口接住「${element.zh}」。`
+        : `接住「${element.zh}」· 剩下 ${session.queue.length + 1} 題`);
+    updateSortHud();
+}
+function placeOrbs() {
+    if (!session) return;
+    session.orbs.forEach((orb) => {
+        if (orb.gone) return;
+        orb.node.style.transform = `translate(${orb.x}px, ${orb.y}px)`;
+    });
+}
+const MOUTH = { x: 0.25, y: 0.11, r: 0.11 };
+function flaskPoint() {
+    const arena = $("arena");
+    const cat = $("cat");
+    if (!arena || !cat || !session) return null;
+    const w = cat.offsetWidth || 180;
+    const h = cat.offsetHeight || 220;
+    return {
+        x: session.catX + w * MOUTH.x,
+        y: arena.clientHeight - h + h * MOUTH.y,
+        r: Math.max(18, w * MOUTH.r)
+    };
+}
+function setMood(name) {
+    if (session) session.mood = name;
+    const img = $("cat-img");
+    const cat = $("cat");
+    if (img) img.src = "assets/catcher/" + name + ".png?v=2";
+    if (cat) {
+        cat.classList.remove("ready", "correct", "burnt");
+        cat.classList.add(name);
+    }
+}
+function clampCat(x) {
+    const arena = $("arena");
+    const cat = $("cat");
+    const w = cat ? (cat.offsetWidth || 180) : 180;
+    const width = arena ? arena.clientWidth : 0;
+    const min = -w * MOUTH.x;
+    const max = Math.max(min, width - w * MOUTH.x);
+    return Math.max(min, Math.min(max, x));
+}
+function slideCat(clientX) {
+    const arena = $("arena");
+    const cat = $("cat");
+    if (!arena || !cat || !session) return;
+    const rect = arena.getBoundingClientRect();
+    const w = cat.offsetWidth || 180;
+    session.catX = clampCat(clientX - rect.left - w * MOUTH.x);
+    cat.style.transform = `translateX(${session.catX}px)`;
+}
+function onSteerDown(e) {
+    if (!session || session.mode !== "sort" || session.lock || session.paused) return;
+    e.preventDefault();
+    session.steer = Number(e.currentTarget.dataset.dir) || 0;
+    e.currentTarget.setPointerCapture(e.pointerId);
+}
+function onSteerUp(e) {
+    if (!session) return;
+    if (Number(e.currentTarget.dataset.dir) === session.steer) session.steer = 0;
+}
+function onArenaDown(e) {
+    if (!session || session.lock || session.paused) return;
+    e.preventDefault();
+    session.dragging = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    slideCat(e.clientX);
+}
+function onArenaMove(e) {
+    if (!session || !session.dragging || session.lock) return;
+    slideCat(e.clientX);
+}
+function endSlide() {
+    if (session) session.dragging = false;
+}
+function setFeedback(text) {
+    const node = $("feedback");
+    if (node) node.textContent = text;
+}
+function updateSortHud() {
+    if (!session) return;
+    $("g-left").textContent = `第 ${session.stage} 關 · 連續 ${session.combo}`;
+    $("g-mid").textContent = `生命 ${session.lives} · ${session.score} 分`;
+    $("hint-btn").textContent = `提示 (${session.hints})`;
+    $("hint-btn").disabled = session.hints <= 0;
+}
+function useSortHint() {
+    if (!session || session.lock || session.hints <= 0 || !session.target) return;
+    session.hints--;
+    session.hinted = true;
+    session.combo = 0;
+    const el = session.target;
+    const orb = session.orbs.find((item) => item.sym === el.sym && !item.gone);
+    if (orb) orb.node.classList.add("hinted");
+    setFeedback(`提示：${el.zh}的符號是 ${el.sym}`);
+    updateSortHud();
+}
+function catchOrb(orb) {
+    if (!session || session.lock || !session.target) return;
+    session.lock = true;
+    orb.gone = true;
+    orb.node.remove();
+    const el = session.target;
+    if (orb.sym === el.sym) {
+        const gain = (session.hinted ? 6 : 10) + Math.min(session.combo, 6) * 2;
+        session.combo = session.hinted ? 0 : session.combo + 1;
+        session.score += gain;
+        const notices = session.hinted ? [] : remember(el.z, true);
+        const rank = addScore(gain);
+        surface(notices, rank);
+        setMood("correct");
+        const caught = $("caught");
+        if (caught) caught.textContent = el.zh;
+        const shine = $("shine");
+        if (shine) shine.hidden = false;
+        sOk();
+        buzz(12);
+        setFeedback(`接對了！${el.zh}是 ${el.sym}　+${gain}`);
+        updateSortHud();
+        later(afterBottle, 780);
+    } else {
+        session.combo = 0;
+        session.lives--;
+        session.wrongs.push({ zh: el.zh, sym: el.sym, picked: orb.sym });
+        const notices = remember(el.z, false);
+        saveAll();
+        surface(notices, null);
+        setMood("burnt");
+        showBoom();
+        shakeApp();
+        sBad();
+        buzz(40);
+        setFeedback("接錯了。" + explainMiss(el, orb.sym));
+        updateSortHud();
+        later(afterBottle, 1200);
+    }
+}
+function onMiss() {
+    if (!session || session.lock || !session.target) return;
+    session.lock = true;
+    const el = session.target;
+    session.combo = 0;
+    session.lives--;
+    session.wrongs.push({ zh: el.zh, sym: el.sym, picked: null });
+    const notices = remember(el.z, false);
+    saveAll();
+    surface(notices, null);
+    sBad();
+    setFeedback(`太慢了，沒接住${el.zh}。符號是 ${el.sym}。`);
+    updateSortHud();
+    later(afterBottle, 1100);
+}
+function showBoom() {
+    const cat = $("cat");
+    if (!cat) return;
+    const b = document.createElement("div");
+    b.className = "boom";
+    b.textContent = "💥";
+    cat.appendChild(b);
+    later(() => b.remove(), 700);
+}
+function afterBottle() {
+    if (!session || session.mode !== "sort") return;
+    session.done++;
+    if (session.lives <= 0) { finishSort(false); return; }
+    if (session.done >= session.total) { finishSort(true); return; }
+    spawnRound();
+}
+function finishSort(win) {
+    if (!session || session.over) return;
+    session.over = true;
+    const stage = session.stage;
+    const slow = session.slow;
+    const lives = session.lives;
+    let score = session.score;
+    if (win) {
+        const bonus = 40 + stage * 10;
+        score += bonus;
+        if (stage > profile().sortCleared) profile().sortCleared = stage;
+        const rank = addScore(bonus);
+        if (rank) session.notices.push("晉升為" + rank.name + "！");
+    }
+    endGame({
+        mode: "sort",
+        win,
+        stars: win ? Math.max(1, Math.min(3, lives)) : 0,
+        title: win ? (stage === 10 ? "前 20 個元素巡迴完成" : "第 " + stage + " 關完成") : "本關結束",
+        score,
+        detail: win
+            ? (stage >= 10 ? "下一關會更快，並加入更多易混符號。" : "符號都接進錐形瓶了。")
+            : "生命用完了。下面是這關要再記的符號。",
+        wrongs: session.wrongs.slice(),
+        notices: [...new Set(session.notices)],
+        againLabel: win ? "下一關" : "再試本關",
+        again: () => startSort(win ? stage + 1 : stage, slow),
+        altLabel: "練習 1–10",
+        alt: () => startSort(1, true)
+    });
+}
+
+function startLock(levelId) {
+    stopLoops();
+    const level = LOCK_LEVELS.find((l) => l.id === levelId) || LOCK_LEVELS[0];
+    const elems = ELEMENTS.filter((e) => e.z >= level.from && e.z <= level.to);
+    const keys = shuffle(elems).map((e) => ({ z: e.z, sym: e.sym, zh: e.zh, hide: false, x: 0, y: 0 }));
+    if (level.hide) {
+        shuffle(keys.filter((k) => k.z !== level.from)).slice(0, level.hide).forEach((k) => { k.hide = true; });
+    }
+    screen = "lock";
+    renderHud();
+    session = {
+        mode: "lock", level, keys, chain: [], expect: level.from, left: level.time,
+        mistakes: 0, score: 0, hints: 3, paused: false, over: false, lock: false,
+        hintedStep: false, wrongs: [], notices: [], lastTick: Date.now()
+    };
+    setPlay(true);
+    view().style.overflow = "hidden";
+    view().innerHTML = `<div class="playcol fit">
+        <div class="gamebar"><span id="g-left"></span><span id="g-mid"></span><span><button type="button" class="tiny" id="hint-btn">提示</button> <button type="button" class="tiny" id="pause-btn">暫停</button></span></div>
+        <div id="prompt" class="feedback"></div>
+        <div id="feedback" class="feedback" role="status">由最小的原子序開始點。</div>
+        <div class="board lockscene" id="board"><svg id="wires"></svg></div>
+    </div>`;
+    $("hint-btn").onclick = lockHint;
+    $("pause-btn").onclick = openPause;
+    $("board").addEventListener("click", (e) => {
+        const btn = e.target.closest(".key");
+        if (!btn) return;
+        onLockTap(Number(btn.dataset.i));
+    });
+    requestAnimationFrame(() => {
+        if (!session || session.mode !== "lock") return;
+        layoutKeys();
+        setLockPrompt();
+        updateLockHud();
+        session.lastTick = Date.now();
+        intervalId = setInterval(lockTick, 100);
+    });
+}
+function layoutKeys() {
+    if (!session || session.mode !== "lock") return;
+    const board = $("board");
+    const rect = board.getBoundingClientRect();
+    const count = session.keys.length;
+    const cols = count <= 10 ? 5 : 4;
+    const rows = Math.ceil(count / cols);
+    const gap = 12;
+    let size = Math.min(74, (rect.width - gap) / cols - gap);
+    if (rows * (size + gap) > rect.height - 8) size = Math.max(44, (rect.height - 8) / rows - gap);
+    const originX = Math.max(gap / 2, (rect.width - cols * (size + gap)) / 2);
+    const originY = Math.max(8, (rect.height - rows * (size + gap)) / 2);
+    session.keys.forEach((key, i) => {
+        const c = i % cols;
+        const r = Math.floor(i / cols);
+        key.x = originX + (c + 0.5) * (size + gap);
+        key.y = originY + (r + 0.5) * (size + gap);
+        let btn = board.querySelector(`.key[data-i="${i}"]`);
+        if (!btn) {
+            btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "key";
+            btn.dataset.i = String(i);
+            board.appendChild(btn);
+        }
+        btn.style.left = key.x + "px";
+        btn.style.top = key.y + "px";
+        btn.style.width = size + "px";
+        btn.style.height = size + "px";
+        btn.innerHTML = key.hide && !btn.classList.contains("hint")
+            ? `<b class="sym">${key.z}</b>`
+            : `<b class="sym${key.sym.length > 1 ? " long" : ""}">${esc(key.sym)}</b>${session.level.prompt === "full" ? `<small>${esc(key.zh)}</small>` : ""}`;
+        btn.classList.toggle("on", session.chain.includes(i));
+    });
+    const svg = $("wires");
+    svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+    svg.style.width = rect.width + "px";
+    svg.style.height = rect.height + "px";
+    drawWires();
+}
+function drawWires() {
+    const svg = $("wires");
+    if (!svg || !session) return;
+    const pts = session.chain.map((i) => session.keys[i].x + "," + session.keys[i].y).join(" ");
+    svg.innerHTML = pts ? `<polyline points="${pts}" fill="none" stroke="#f0b429" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>` : "";
+}
+function setLockPrompt() {
+    if (!session) return;
+    const el = ELEMENTS.find((e) => e.z === session.expect);
+    const node = $("prompt");
+    if (!node || !el) return;
+    const lv = session.level;
+    if (lv.prompt === "full") node.textContent = `下一個：${el.zh} ${el.sym}`;
+    else if (lv.prompt === "name") node.textContent = `下一個：${el.zh}（原子序 ${el.z}）`;
+    else if (lv.prompt === "z") node.textContent = `下一個：原子序 ${el.z}`;
+    else node.textContent = `依原子序由小到大 · 已連接 ${session.chain.length}/${session.keys.length}`;
+}
+function updateLockHud() {
+    if (!session) return;
+    $("g-left").textContent = session.level.title;
+    $("g-mid").textContent = Math.max(0, Math.ceil(session.left)) + " 秒 · 錯 " + session.mistakes + "/6";
+    $("hint-btn").textContent = `提示 (${session.hints})`;
+    $("hint-btn").disabled = session.hints <= 0;
+}
+function lockTick() {
+    if (!session || session.mode !== "lock" || session.over) return;
+    const now = Date.now();
+    const dt = (now - session.lastTick) / 1000;
+    session.lastTick = now;
+    if (session.paused) return;
+    session.left -= dt;
+    updateLockHud();
+    if (session.left <= 0) finishLock(false);
+}
+function onLockTap(index) {
+    if (!session || session.paused || session.over || session.chain.includes(index)) return;
+    const key = session.keys[index];
+    if (key.z !== session.expect) { wrongLock(key, index); return; }
+    session.chain.push(index);
+    const btn = document.querySelector(`.key[data-i="${index}"]`);
+    if (btn) btn.classList.add("on");
+    drawWires();
+    const revealed = session.level.prompt === "full" || session.hintedStep;
+    if (!revealed) {
+        const notices = remember(key.z, true);
+        session.score += 8;
+        const rank = addScore(8);
+        surface(notices, rank);
+    } else {
+        session.score += 4;
+        addScore(4);
+    }
+    session.hintedStep = false;
+    sOk();
+    buzz(10);
+    setFeedback("接上了。");
+    if (session.expect >= session.level.to) finishLock(true);
+    else {
+        session.expect++;
+        setLockPrompt();
+    }
+}
+function wrongLock(key, index) {
+    session.mistakes++;
+    session.left = Math.max(0, session.left - 4);
+    const expected = ELEMENTS.find((e) => e.z === session.expect);
+    if (session.level.prompt !== "full") {
+        const notices = remember(expected.z, false);
+        saveAll();
+        surface(notices, null);
+    } else {
+        profile().streak = 0;
+        saveAll();
+    }
+    session.wrongs.push({ zh: expected.zh, sym: expected.sym, picked: key.hide ? String(key.z) : key.sym });
+    const btn = document.querySelector(`.key[data-i="${index}"]`);
+    if (btn) {
+        btn.classList.add("badflash");
+        later(() => btn.classList.remove("badflash"), 320);
+    }
+    sBad();
+    shakeApp();
+    setFeedback(session.level.prompt === "none" ? "還不是下一個。" : `${expected.zh}的符號是 ${expected.sym}。`);
+    updateLockHud();
+    if (session.mistakes >= 6) finishLock(false);
+}
+function lockHint() {
+    if (!session || session.over || session.hints <= 0) return;
+    session.hints--;
+    session.hintedStep = true;
+    session.left = Math.max(0, session.left - 5);
+    const index = session.keys.findIndex((k) => k.z === session.expect);
+    const key = session.keys[index];
+    const btn = document.querySelector(`.key[data-i="${index}"]`);
+    if (btn) {
+        btn.classList.add("hint");
+        key.hide = false;
+        btn.innerHTML = `<b class="sym">${esc(key.sym)}</b>`;
+    }
+    setFeedback(`提示：${key.zh}是 ${key.sym}`);
+    updateLockHud();
+}
+function finishLock(win) {
+    if (!session || session.over) return;
+    session.over = true;
+    const level = session.level;
+    const mistakes = session.mistakes;
+    let score = session.score;
+    if (win) {
+        const bonus = 60 + Math.round(Math.max(0, session.left) * 2);
+        score += bonus;
+        if (level.id > profile().lockCleared) profile().lockCleared = level.id;
+        const rank = addScore(bonus);
+        if (rank) session.notices.push("晉升為" + rank.name + "！");
+    }
+    const stars = !win ? 0 : mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+    const result = {
+        mode: "lock",
+        win,
+        stars,
+        title: win ? level.title + " 解開了" : "櫃子還鎖著",
+        score,
+        detail: win ? "順序正確，櫃門打開了。" : "時間用完或錯滿 6 次。結果畫面列出要再記的元素。",
+        wrongs: session.wrongs.slice(),
+        notices: [...new Set(session.notices)],
+        againLabel: win && level.id < 5 ? "下一關" : "再試本關",
+        again: () => startLock(win && level.id < 5 ? level.id + 1 : level.id),
+        altLabel: "從第 1 關再練",
+        alt: () => startLock(1)
+    };
+    if (win) {
+        const board = $("board");
+        if (board) board.classList.add("open");
+        setFeedback("鎖打開了！");
+        sWinBurst(true);
+        later(() => { if (screen === "lock") endGame(result); }, 1700);
+        return;
+    }
+    sWinBurst(false);
+    endGame(result);
+}
+function sWinBurst(win) { if (win) sWin(); }
+
+function recipeByName(name) { return RECIPES.find((r) => r.name === name); }
+function setMixFace(face) {
+    const scene = document.querySelector(".mixscene");
+    if (!scene) return;
+    scene.classList.remove("good", "bad");
+    if (face) scene.classList.add(face);
+}
+function tally(list) {
+    const order = [];
+    const n = {};
+    list.forEach((sym) => {
+        if (!n[sym]) order.push(sym);
+        n[sym] = (n[sym] || 0) + 1;
+    });
+    return order.map((sym) => ({ sym, n: n[sym] }));
+}
+function countsMatch(picked, need) {
+    const want = {};
+    tally(need).forEach((item) => { want[item.sym] = item.n; });
+    const got = tally(picked);
+    if (got.length !== Object.keys(want).length) return false;
+    return got.every((item) => want[item.sym] === item.n);
+}
+function needPhrase(elements) {
+    return tally(elements).map((item) => {
+        const el = elementBySym(item.sym);
+        return (el ? el.zh + " " : "") + item.sym + "×" + item.n;
+    }).join("、");
+}
+function atomsShort(need, picked) {
+    const have = {};
+    picked.forEach((sym) => { have[sym] = (have[sym] || 0) + 1; });
+    const missing = [];
+    tally(need).forEach((item) => {
+        const left = item.n - (have[item.sym] || 0);
+        for (let i = 0; i < left; i++) missing.push(item.sym);
+    });
+    return missing;
+}
+function mixTiles(recipe, count) {
+    const tiles = [...new Set(recipe.elements)];
+    const bag = [];
+    recipe.elements.forEach((sym) => (CONF[sym] || []).forEach((c) => bag.push(c)));
+    shuffle(bag).forEach((sym) => {
+        if (tiles.length >= count || FAKES[sym] || tiles.includes(sym) || !elementBySym(sym)) return;
+        tiles.push(sym);
+    });
+    shuffle(ELEMENTS).forEach((e) => {
+        if (tiles.length < count && !tiles.includes(e.sym)) tiles.push(e.sym);
+    });
+    return shuffle(tiles);
+}
+function startMix(levelId) {
+    stopLoops();
+    const level = MIX_LEVELS.find((l) => l.id === levelId) || MIX_LEVELS[0];
+    screen = "mix";
+    renderHud();
+    session = {
+        mode: "mix", level, index: 0, score: 0, correct: 0, clean: true,
+        wrongs: [], hints: 2, paused: false, over: false, lock: false,
+        picked: [], tries: 0, hinted: false, notices: [], lastTick: Date.now(),
+        recipe: null, left: level.time, totalTime: level.time
+    };
+    setPlay(true);
+    view().style.overflow = "auto";
+    view().innerHTML = `<div class="playcol grow">
+        <div class="gamebar"><span id="g-left"></span><span id="g-mid"></span><span><button type="button" class="tiny" id="hint-btn">提示</button> <button type="button" class="tiny" id="pause-btn">暫停</button></span></div>
+        <p id="order" class="how"></p>
+        <div class="timebar"><span id="timefill"></span></div>
+        <div class="mixscene">
+            <div class="flaskhold" id="dish"></div>
+            <div class="shelf" id="tiles"></div>
+        </div>
+        <div id="feedback" class="feedback" role="status"></div>
+        <button class="primary" id="submit" type="button">完成配製</button>
+    </div>`;
+    $("hint-btn").onclick = mixHint;
+    $("pause-btn").onclick = openPause;
+    $("submit").onclick = submitMix;
+    $("dish").addEventListener("click", (e) => {
+        const chip = e.target.closest(".chip");
+        if (!chip || !session || session.lock) return;
+        removePicked(chip.dataset.sym);
+    });
+    $("tiles").addEventListener("pointerdown", onTileDown, { passive: false });
+    loadRecipe();
+    session.lastTick = Date.now();
+    intervalId = setInterval(mixTick, 100);
+}
+function loadRecipe() {
+    setMixFace("");
+    const name = session.level.recipes[session.index];
+    session.recipe = recipeByName(name);
+    session.picked = [];
+    session.tries = 0;
+    session.hinted = false;
+    session.lock = false;
+    session.left = session.level.time;
+    session.totalTime = session.level.time;
+    const tiles = mixTiles(session.recipe, 9);
+    const slots = [
+        [69.6, 25.2], [79.2, 25.2], [87.8, 25.2],
+        [69.6, 42.8], [79.2, 42.8], [87.8, 42.8],
+        [69.6, 59.6], [79.2, 59.6], [87.8, 59.6]
+    ];
+    const juices = ["#f3d34d", "#f7fbff", "#d7ecff", "#b6e48a", "#9fd6ff", "#f3a8ad", "#f0c56e", "#d4c2f5", "#f0ddb0"];
+    const caps = ["#3a628c", "#c4473c", "#3a628c", "#2f6b4f", "#3a628c", "#c4473c", "#d07a1e", "#3a628c", "#2c2c2c"];
+    $("tiles").innerHTML = tiles.map((sym, i) => {
+        const [left, top] = slots[i];
+        return `<button type="button" class="tile bottle" data-sym="${esc(sym)}" style="left:${left}%;top:${top}%">
+            <span class="cap" style="background:${caps[i]}"></span>
+            <span class="juice" style="background:${juices[i]}"></span>
+            <b class="qty" hidden></b>
+            <b class="sym${sym.length > 1 ? " long" : ""}">${esc(sym)}</b>
+        </button>`;
+    }).join("");
+    const atoms = session.recipe.elements.length;
+    session.left = session.level.time + Math.max(0, atoms - 4) * 1.2;
+    session.totalTime = session.left;
+    const formula = session.level.showFormula ? "化學式 " + session.recipe.formula + "。" : "這關不顯示化學式。";
+    $("order").textContent = `請配製「${session.recipe.name}」。${formula}下標是幾，就要加幾次。（${session.index + 1}/${session.level.recipes.length}）`;
+    setFeedback("每點一次加一個。點錐形瓶裡的符號，可以取出一個。");
+    paintSelection();
+    updateMixHud();
+}
+function paintSelection() {
+    if (!session) return;
+    const counts = {};
+    session.picked.forEach((sym) => { counts[sym] = (counts[sym] || 0) + 1; });
+    document.querySelectorAll(".tile").forEach((tile) => {
+        const n = counts[tile.dataset.sym] || 0;
+        tile.classList.toggle("on", n > 0);
+        tile.setAttribute("aria-pressed", n > 0 ? "true" : "false");
+        const qty = tile.querySelector(".qty");
+        if (qty) {
+            qty.hidden = n === 0;
+            qty.textContent = n ? "×" + n : "";
+        }
+    });
+    const dish = $("dish");
+    dish.innerHTML = session.picked.length
+        ? tally(session.picked).map((item) => `<button type="button" class="chip" data-sym="${esc(item.sym)}">${esc(item.sym)}×${item.n}</button>`).join("")
+        : "";
+    $("submit").disabled = session.picked.length === 0;
+}
+let tileDrag = null;
+function onTileDown(e) {
+    const tile = e.target.closest(".tile");
+    if (!tile || !session || session.lock) return;
+    e.preventDefault();
+    tileDrag = { sym: tile.dataset.sym, x: e.clientX, y: e.clientY, moved: false, id: e.pointerId, tile };
+    try { tile.setPointerCapture(e.pointerId); } catch (err) { /* synthetic taps have no capture */ }
+    tile.addEventListener("pointermove", onTileMove);
+    tile.addEventListener("pointerup", onTileUp);
+    tile.addEventListener("pointercancel", onTileUp);
+}
+function onTileMove(e) {
+    if (!tileDrag || e.pointerId !== tileDrag.id) return;
+    if (Math.hypot(e.clientX - tileDrag.x, e.clientY - tileDrag.y) > 8) {
+        tileDrag.moved = true;
+        const g = $("ghost");
+        g.hidden = false;
+        g.textContent = tileDrag.sym;
+        g.style.left = e.clientX + "px";
+        g.style.top = e.clientY + "px";
+    }
+}
+function onTileUp(e) {
+    if (!tileDrag || e.pointerId !== tileDrag.id) return;
+    const drag = tileDrag;
+    tileDrag = null;
+    $("ghost").hidden = true;
+    drag.tile.removeEventListener("pointermove", onTileMove);
+    drag.tile.removeEventListener("pointerup", onTileUp);
+    drag.tile.removeEventListener("pointercancel", onTileUp);
+    if (!session || session.lock) return;
+    if (!drag.moved) {
+        addPicked(drag.sym);
+        return;
+    }
+    const dish = $("dish").getBoundingClientRect();
+    const inside = e.clientX >= dish.left && e.clientX <= dish.right && e.clientY >= dish.top && e.clientY <= dish.bottom;
+    if (inside) addPicked(drag.sym);
+}
+const MIX_CAP = 20;
+function addPicked(sym) {
+    if (!session || session.lock) return;
+    const have = session.picked.filter((s) => s === sym).length;
+    if (have >= MIX_CAP) {
+        setFeedback("這個元素已經加得很多了。點錐形瓶裡的符號可以取出。");
+        return;
+    }
+    session.picked.push(sym);
+    paintSelection();
+}
+function removePicked(sym) {
+    if (!session || session.lock) return;
+    const index = session.picked.lastIndexOf(sym);
+    if (index >= 0) session.picked.splice(index, 1);
+    paintSelection();
+}
+function updateMixHud() {
+    if (!session) return;
+    $("g-left").textContent = session.level.title;
+    $("g-mid").textContent = Math.max(0, Math.ceil(session.left)) + " 秒";
+    const bar = $("timefill");
+    if (bar) {
+        const frac = Math.max(0, session.left / session.totalTime);
+        bar.style.width = (frac * 100) + "%";
+        bar.style.background = frac < 0.3 ? "#ef4444" : "#0f6e86";
+    }
+    $("hint-btn").textContent = `提示 (${session.hints})`;
+    $("hint-btn").disabled = session.hints <= 0;
+}
+function mixTick() {
+    if (!session || session.mode !== "mix" || session.over) return;
+    const now = Date.now();
+    const dt = (now - session.lastTick) / 1000;
+    session.lastTick = now;
+    if (session.paused || session.lock) return;
+    session.left -= dt;
+    updateMixHud();
+    if (session.left <= 0) failRecipe();
+}
+function submitMix() {
+    if (!session || session.lock || session.over) return;
+    if (countsMatch(session.picked, session.recipe.elements)) { successRecipe(); return; }
+    session.tries++;
+    session.clean = false;
+    session.lock = true;
+    session.faceToken = (session.faceToken || 0) + 1;
+    const token = session.faceToken;
+    profile().streak = 0;
+    saveAll();
+    setMixFace("bad");
+    sBad();
+    shakeApp();
+    const symbolsOk = countsMatch(
+        [...new Set(session.picked)],
+        [...new Set(session.recipe.elements)]
+    );
+    if (session.level.showFormula || session.tries >= 2) {
+        const formulaBit = session.level.showFormula ? "" : "化學式是 " + session.recipe.formula + "。";
+        setFeedback((symbolsOk ? "數量不對。" : "元素不對。") + formulaBit + "需要" + needPhrase(session.recipe.elements) + "。");
+    } else if (symbolsOk) setFeedback("數量不對。下標是幾，就要加幾次。不多也不少，才算完成。");
+    else setFeedback("嗚…失敗了。胡亂混合會發生劇烈反應。不多也不少，才算完成。");
+    later(() => {
+        if (!session || session.mode !== "mix" || session.over || session.faceToken !== token) return;
+        session.lock = false;
+        setMixFace("");
+    }, 1400);
+}
+function mixHint() {
+    if (!session || session.lock || session.hints <= 0) return;
+    const missing = atomsShort(session.recipe.elements, session.picked);
+    if (!missing.length) { setFeedback("需要的數量已經夠了。點錐形瓶裡的符號，取出多加的元素。"); return; }
+    session.hints--;
+    session.hinted = true;
+    session.clean = false;
+    session.picked.push(missing[0]);
+    setFeedback("提示：再放入 " + missing[0]);
+    paintSelection();
+    updateMixHud();
+}
+function successRecipe() {
+    session.lock = true;
+    const recipe = session.recipe;
+    const first = session.tries === 0 && !session.hinted;
+    const gain = first ? 25 : 12;
+    if (!session.hinted) {
+        const notices = [];
+        [...new Set(recipe.elements)].forEach((sym) => notices.push(...remember(elementBySym(sym).z, true)));
+        session.score += gain;
+        const rank = addScore(gain);
+        surface(notices, rank);
+    } else {
+        session.score += gain;
+        addScore(gain);
+    }
+    session.correct++;
+    setMixFace("good");
+    setFeedback("精準成果！配好了。" + recipe.tip);
+    sOk();
+    later(nextRecipe, 1600);
+}
+function failRecipe() {
+    if (!session || session.lock || session.over) return;
+    session.lock = true;
+    session.clean = false;
+    const recipe = session.recipe;
+    const notices = [];
+    [...new Set(recipe.elements)].forEach((sym) => {
+        if (!session.picked.includes(sym)) notices.push(...remember(elementBySym(sym).z, false));
+    });
+    if (notices.length === 0) {
+        profile().streak = 0;
+        saveAll();
+    } else surface(notices, null);
+    saveAll();
+    session.wrongs.push({ name: recipe.name, formula: recipe.formula, sym: needPhrase(recipe.elements), zh: recipe.name, picked: null });
+    setMixFace("bad");
+    setFeedback(`${recipe.name} ${recipe.formula} 需要${needPhrase(recipe.elements)}。${recipe.tip}`);
+    sBad();
+    later(nextRecipe, 1800);
+}
+function nextRecipe() {
+    if (!session || session.mode !== "mix") return;
+    session.index++;
+    if (session.index >= session.level.recipes.length) finishMix();
+    else loadRecipe();
+}
+function finishMix() {
+    if (!session || session.over) return;
+    session.over = true;
+    const level = session.level;
+    const total = level.recipes.length;
+    const correct = session.correct;
+    let score = session.score;
+    const all = correct === total;
+    if (all) {
+        score += 50;
+        if (level.id > profile().mixCleared) profile().mixCleared = level.id;
+        const rank = addScore(50);
+        if (rank) session.notices.push("晉升為" + rank.name + "！");
+    }
+    sWinBurst(all);
+    endGame({
+        mode: "mix",
+        win: all,
+        stars: correct === total ? (session.clean ? 3 : 2) : correct ? 1 : 0,
+        title: `配製完成 ${correct}/${total}`,
+        score,
+        detail: all ? "這組訂單都配對了。" : "未完成的訂單列在下面，可以再練一次。",
+        wrongs: session.wrongs.slice(),
+        notices: [...new Set(session.notices)],
+        againLabel: all && level.id < 3 ? "下一關" : "再練本關",
+        again: () => startMix(all && level.id < 3 ? level.id + 1 : level.id),
+        altLabel: "從第 1 關再練",
+        alt: () => startMix(1)
+    });
+}
+
+function endGame(data) {
+    closeModal();
+    const p = profile();
+    if (data.score > (p.best[data.mode] || 0)) {
+        p.best[data.mode] = data.score;
+        data.best = true;
+    }
+    screen = "result";
+    saveAll();
+    stopLoops();
+    const v = view();
+    v.scrollTop = 0;
+    const lines = [];
+    const seen = new Set();
+    data.wrongs.forEach((w) => {
+        const line = w.formula ? `${w.name} ${w.formula} 需要 ${w.sym}` : wrongLine(w);
+        if (!seen.has(line)) { seen.add(line); lines.push(line); }
+    });
+    v.innerHTML = `<div class="wrap">
+        <section class="cardbox">
+            <p class="stars" aria-label="${data.stars} 星">${starsText(data.stars)}</p>
+            <h2>${esc(data.title)}</h2>
+            <p class="how">本關 ${data.score} 分${data.best ? " · 新高分" : ""}。累積積分 ${p.earned}。現在是${esc(RANKS.find((r) => r.id === (p.highestRank || "trainee")).name)}。</p>
+            <p class="how">${esc(data.detail)}</p>
+            ${data.notices.length ? `<p class="how">${data.notices.map(esc).join("<br>")}</p>` : ""}
+            ${lines.length ? `<p class="kicker">再記一次</p><p class="how">${lines.map(esc).join("<br>")}</p>` : ""}
+        </section>
+        <button class="primary" id="again" type="button">${esc(data.againLabel)}</button>
+        <button class="ghost" id="alt" type="button">${esc(data.altLabel)}</button>
+        <button class="ghost" id="home" type="button">返回實驗室</button>
+    </div>`;
+    $("again").onclick = data.again;
+    $("alt").onclick = data.alt;
+    $("home").onclick = showHome;
+}
+
+function onKeyDown(e) {
+    if (e.key === "Escape") {
+        if (session && !session.over) openPause();
+        else if (!$("modal").hidden) closeModal();
+        return;
+    }
+    if (!session || session.mode !== "sort" || session.lock || session.paused) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const cat = $("cat");
+    const arena = $("arena");
+    if (!cat || !arena) return;
+    session.catX = clampCat(session.catX + (e.key === "ArrowLeft" ? -32 : 32));
+    cat.style.transform = `translateX(${session.catX}px)`;
+    e.preventDefault();
+}
+
+load();
+$("back-btn").onclick = onBack;
+$("sound-btn").onclick = () => {
+    root.sound = !root.sound;
+    saveAll();
+    if (root.sound) unlockAudio();
+};
+$("points-btn").onclick = () => { if (session && !session.over) openPause(); else showShop(); };
+$("player-btn").onclick = () => { if (session && !session.over) openPause(); else if (screen === "profiles") showHome(); else showProfiles(); };
+document.addEventListener("pointerdown", () => unlockAudio(), { passive: true });
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden && session && !session.paused && !session.over) openPause();
+});
+window.addEventListener("resize", () => { if (session && session.mode === "lock") layoutKeys(); });
+window.addEventListener("keydown", onKeyDown);
+showHome();
+    </script>
+</body>
+</html>
