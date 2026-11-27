@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>報銷單 · 浸中科學實驗室</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    /* Custom subtle scrollbar for wide tables */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #3b82f6;
+      background-color: #eff6ff;
+      border-radius: 4px;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body:has(#reportModal:not(.hidden)) header,
+      body:has(#reportModal:not(.hidden)) main,
+      body:has(#reportModal:not(.hidden)) #toastContainer,
+      body:has(#reportModal:not(.hidden)) #imageModal,
+      body:has(#reportModal:not(.hidden)) #reportModalToolbar,
+      body:has(#reportModal:not(.hidden)) #reportMetaBar {
+        display: none !important;
+      }
+      body:has(#reportModal:not(.hidden)) #reportModal {
+        position: static !important;
+        inset: auto !important;
+        display: block !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      #reportModalContainer {
+        max-width: 100% !important;
+        max-height: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+      }
+      #reportScrollArea {
+        overflow: visible !important;
+        padding: 0 !important;
+      }
+      #printableReportSheet {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .receipt-print-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">報銷單自動生成工具</h1>
+          <p class="text-xs text-slate-500">浸中科學實驗室 · 上傳淘寶／網購訂單截圖，自動提取並轉換繁體中文報銷明細表</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="openReportBtn" type="button" class="text-xs sm:text-sm px-3.5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold shadow-sm transition flex items-center gap-1.5 whitespace-nowrap">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>生成完整報銷報告</span>
+        </button>
+        <a href="index.html" class="text-xs sm:text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium transition whitespace-nowrap">返回首頁</a>
+        <button id="loadSampleBtn" type="button" class="text-xs sm:text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium transition whitespace-nowrap">
+          載入範例數據
+        </button>
+        <button id="clearAllBtn" type="button" class="text-xs sm:text-sm px-3 py-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 font-medium transition whitespace-nowrap">
+          清空全部
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Notification Banner -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top Control Panel: Upload & Order Number Settings -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Drag & Drop Upload Box -->
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+            1. 上傳訂單截圖 (支援多張圖片同時上傳)
+          </h2>
+          <span class="text-xs text-slate-400">支援 PNG, JPG, WEBP</span>
+        </div>
+
+        <label id="dropZone" for="fileInput" class="relative flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50/70 hover:bg-blue-50/50 hover:border-blue-400 transition cursor-pointer group p-4 text-center">
+          <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
+          <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-105 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          </div>
+          <p class="text-sm font-medium text-slate-700">點擊選擇截圖，或將訂單截圖拖曳至此處</p>
+          <p class="text-xs text-slate-400 mt-1">AI 將自動辨識付款日期、收貨日期、繁體項目名稱、數量、單價及實付款 (MOP)</p>
+        </label>
+
+        <!-- Processing Queue Status -->
+        <div id="queueStatus" class="hidden mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span id="queueStatusText" class="text-sm font-medium text-blue-800">正在辨識訂單截圖...</span>
+          </div>
+          <span id="queueProgressBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-600 text-white">0 / 0</span>
+        </div>
+      </div>
+
+      <!-- Numbering & Formatting Configuration -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">
+            <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+            2. 編號與格式設定
+          </h2>
+
+          <div class="space-y-4">
+            <div>
+              <label for="prefixInput" class="block text-xs font-medium text-slate-600 mb-1">編號前綴 (Order Prefix)</label>
+              <input id="prefixInput" type="text" value="TB2627" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono" placeholder="例如: TB2627" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="startNumInput" class="block text-xs font-medium text-slate-600 mb-1">起始序號 (nn)</label>
+                <input id="startNumInput" type="number" min="1" value="1" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono" />
+              </div>
+              <div>
+                <label for="padDigitsInput" class="block text-xs font-medium text-slate-600 mb-1">序號位數</label>
+                <select id="padDigitsInput" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                  <option value="2" selected>2 位數 (01, 02)</option>
+                  <option value="3">3 位數 (001, 002)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-1">
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input id="sortByDateCheckbox" type="checkbox" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                <span class="text-xs text-slate-600">自動按「付款日期」由舊至新排序訂單</span>
+              </label>
+            </div>
+
+            <p class="text-[11px] text-slate-400">截圖辨識由實驗室伺服器代為呼叫 DeepSeek，這個頁面不會顯示或儲存 API 金鑰。</p>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>預覽首張編號：</span>
+          <span id="previewOrderCode" class="font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">TB262701</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uploaded Receipts Gallery (Thumbnails + Order Cards) -->
+    <section id="receiptsSection" class="hidden space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          已匯入的訂單截圖核對 (<span id="orderCountLabel">0</span> 張訂單)
+        </h2>
+        <button id="addManualOrderBtn" type="button" class="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition flex items-center gap-1">
+          <span>+ 手動新增訂單</span>
+        </button>
+      </div>
+
+      <div id="receiptCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Dynamically injected receipt preview cards -->
+      </div>
+    </section>
+
+    <!-- Generated Reimbursement Table Section -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            3. 報銷明細表預覽與編輯
+            <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">點擊表格內容可直接修改</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">同筆訂單第二項起自動顯示 <code class="text-slate-700 bg-slate-100 px-1 rounded">(同上)</code>，並自動計算 RMB 與 MOP 總計</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="openReportBtnSecondary" type="button" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            生成完整報告 (含憑證附圖)
+          </button>
+          <button id="copyMarkdownBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            複製 Markdown 表格
+          </button>
+
+          <button id="copyTsvBtn" type="button" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-medium shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            複製貼上 Excel
+          </button>
+
+          <button id="exportCsvBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            匯出 CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Responsive Table Wrapper -->
+      <div class="overflow-x-auto">
+        <table id="reimbursementTable" class="w-full text-left border-collapse min-w-[960px]">
+          <thead>
+            <tr class="bg-slate-100/80 border-b border-slate-200 text-xs font-semibold text-slate-700">
+              <th class="py-3 px-3.5 whitespace-nowrap">編號</th>
+              <th class="py-3 px-3.5 whitespace-nowrap">付款日期</th>
+              <th class="py-3 px-3.5 whitespace-nowrap">收貨日期 (成交時間)</th>
+              <th class="py-3 px-3.5 min-w-[260px]">項目名稱</th>
+              <th class="py-3 px-3 text-center whitespace-nowrap">數量</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">單價 (RMB)</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">小計 (RMB)</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap min-w-[210px]">訂單實付款 (MOP)</th>
+              <th class="py-3 px-2 text-center whitespace-nowrap w-16">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-200 text-sm">
+            <!-- Empty state row -->
+            <tr>
+              <td colspan="9" class="py-12 text-center text-slate-400">
+                <div class="flex flex-col items-center justify-center gap-2">
+                  <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <p class="text-sm font-medium text-slate-500">尚未有任何訂單資料</p>
+                  <p class="text-xs text-slate-400">請在上方拖曳上傳訂單截圖，或點擊右上角「載入範例數據」測試</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot id="tableFooter" class="hidden bg-slate-50 border-t-2 border-slate-300 font-bold text-slate-900 text-sm">
+            <tr>
+              <td class="py-3.5 px-3.5">總計</td>
+              <td class="py-3.5 px-3.5"></td>
+              <td class="py-3.5 px-3.5"></td>
+              <td class="py-3.5 px-3.5 text-xs font-normal text-slate-500" id="footerSummaryCount">共 0 筆訂單，0 項商品</td>
+              <td class="py-3.5 px-3 text-center" id="footerTotalQty">0</td>
+              <td class="py-3.5 px-3.5"></td>
+              <td class="py-3.5 px-3.5 text-right font-mono text-slate-800" id="footerTotalRmb">¥0.00</td>
+              <td class="py-3.5 px-3.5 text-right font-mono text-blue-700 text-base" id="footerTotalMop">MOP 0.00</td>
+              <td class="py-3.5 px-2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Markdown Raw Preview Accordion -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Markdown 原始碼預覽</h3>
+        <span class="text-xs text-slate-400">可直接貼入 Notion / GitHub / 文件</span>
+      </div>
+      <pre id="markdownRawPreview" class="bg-slate-900 text-slate-100 text-xs p-4 rounded-xl overflow-x-auto font-mono leading-relaxed select-all">尚未生成資料...</pre>
+    </section>
+
+  </main>
+
+  <!-- Image Lightbox Modal -->
+  <div id="imageModal" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <span id="modalImageTitle" class="text-sm font-semibold text-slate-800">訂單截圖預覽</span>
+        <button id="closeModalBtn" type="button" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-4 overflow-auto flex-1 flex items-center justify-center bg-slate-950">
+        <img id="modalImageEl" src="" alt="Receipt Preview" class="max-w-full max-h-[75vh] object-contain rounded" />
+      </div>
+    </div>
+  </div>
+
+  <div id="reportModal" class="fixed inset-0 z-50 hidden bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+    <div id="reportModalContainer" class="bg-slate-100 w-full max-w-6xl max-h-[94vh] rounded-2xl shadow-2xl border border-slate-300 flex flex-col overflow-hidden">
+      <div id="reportModalToolbar" class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-slate-900">報銷申請報告預覽 (含對應編號憑證附圖)</h2>
+            <p class="text-[11px] text-slate-500">可修改報告標題、申請人，並列印或下載獨立 HTML 報告</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="inline-flex rounded-lg border border-slate-300 bg-slate-50 p-0.5 text-xs">
+            <button id="gridCols1Btn" type="button" class="px-2.5 py-1 rounded-md font-medium text-slate-600 hover:text-slate-900 transition">單欄大圖</button>
+            <button id="gridCols2Btn" type="button" class="px-2.5 py-1 rounded-md font-semibold bg-white text-blue-700 shadow-sm transition">雙欄並排</button>
+          </div>
+          <button id="printReportBtn" type="button" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">列印 / 另存為 PDF</button>
+          <button id="downloadHtmlReportBtn" type="button" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">下載 HTML 報告檔</button>
+          <button id="closeReportModalBtn" type="button" class="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition" title="關閉預覽">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="reportMetaBar" class="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-[11px] font-medium text-slate-500 mb-1">報告主標題</label>
+          <input id="reportTitleInput" type="text" value="浸中科學實驗室採購報銷明細及憑證報告" class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-500 mb-1">申請人 / 部門 (選填)</label>
+          <input id="reportApplicantInput" type="text" value="" placeholder="例如：浸中科學實驗室" class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-500 mb-1">報告日期</label>
+          <input id="reportDateInput" type="date" class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono" />
+        </div>
+      </div>
+      <div id="reportScrollArea" class="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-200/70">
+        <div id="printableReportSheet" class="bg-white max-w-4xl mx-auto p-6 sm:p-10 rounded-xl shadow-md border border-slate-200 space-y-8"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Application State
+     * Each order object structure:
+     * {
+     *   id: string,
+     *   storeName: string,
+     *   paymentDate: string (YYYY-MM-DD),
+     *   receiptDate: string (YYYY-MM-DD),
+     *   actualPaidMop: number,
+     *   paymentNote: string, // e.g., "(整單實付，含店鋪優惠 -¥20.00)"
+     *   imageUrl: string | null,
+     *   fileName: string,
+     *   items: [
+     *     { id: string, name: string, quantity: number, unitPriceRmb: number }
+     *   ]
+     * }
+     */
+    let orders = [];
+    let reportGridCols = 2;
+    function deepseekApiUrl() {
+      const onLabServer = (location.hostname === '127.0.0.1' || location.hostname === 'localhost') && String(location.port) === '8765';
+      return onLabServer ? 'api/deepseek' : 'http://127.0.0.1:8765/api/deepseek';
+    }
+    const DEEPSEEK_VISION_MODEL = 'deepseek-flash';
+
+    // DOM Elements
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const queueStatus = document.getElementById('queueStatus');
+    const queueStatusText = document.getElementById('queueStatusText');
+    const queueProgressBadge = document.getElementById('queueProgressBadge');
+    const prefixInput = document.getElementById('prefixInput');
+    const startNumInput = document.getElementById('startNumInput');
+    const padDigitsInput = document.getElementById('padDigitsInput');
+    const sortByDateCheckbox = document.getElementById('sortByDateCheckbox');
+    const previewOrderCode = document.getElementById('previewOrderCode');
+    const receiptsSection = document.getElementById('receiptsSection');
+    const receiptCardsContainer = document.getElementById('receiptCardsContainer');
+    const orderCountLabel = document.getElementById('orderCountLabel');
+    const tableBody = document.getElementById('tableBody');
+    const tableFooter = document.getElementById('tableFooter');
+    const footerSummaryCount = document.getElementById('footerSummaryCount');
+    const footerTotalQty = document.getElementById('footerTotalQty');
+    const footerTotalRmb = document.getElementById('footerTotalRmb');
+    const footerTotalMop = document.getElementById('footerTotalMop');
+    const markdownRawPreview = document.getElementById('markdownRawPreview');
+    const imageModal = document.getElementById('imageModal');
+    const modalImageEl = document.getElementById('modalImageEl');
+    const modalImageTitle = document.getElementById('modalImageTitle');
+    const reportModal = document.getElementById('reportModal');
+    const printableReportSheet = document.getElementById('printableReportSheet');
+    const reportTitleInput = document.getElementById('reportTitleInput');
+    const reportApplicantInput = document.getElementById('reportApplicantInput');
+    const reportDateInput = document.getElementById('reportDateInput');
+    const gridCols1Btn = document.getElementById('gridCols1Btn');
+    const gridCols2Btn = document.getElementById('gridCols2Btn');
+    reportDateInput.value = new Date().toISOString().split('T')[0];
+
+    // Helper: Show Toast Notification
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-800 text-white'
+      };
+      toast.className = `${colors[type] || colors.info} px-4 py-2.5 rounded-xl shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Helper: Generate unique ID
+    function uid() {
+      return Math.random().toString(36).substring(2, 10);
+    }
+
+    // Helper: Format Order Code (e.g., TB262701)
+    function getOrderCode(index) {
+      const prefix = (prefixInput.value || 'TB2627').trim();
+      const start = parseInt(startNumInput.value, 10) || 1;
+      const digits = parseInt(padDigitsInput.value, 10) || 2;
+      const numStr = String(start + index).padStart(digits, '0');
+      return `${prefix}${numStr}`;
+    }
+
+    // Update preview badge when prefix/number changes
+    function updateOrderCodePreview() {
+      previewOrderCode.textContent = getOrderCode(0);
+      renderAll();
+    }
+
+    prefixInput.addEventListener('input', updateOrderCodePreview);
+    startNumInput.addEventListener('input', updateOrderCodePreview);
+    padDigitsInput.addEventListener('change', updateOrderCodePreview);
+    sortByDateCheckbox.addEventListener('change', () => {
+      if (sortByDateCheckbox.checked) {
+        sortOrdersByDate();
+      }
+      renderAll();
+    });
+
+    function sortOrdersByDate() {
+      orders.sort((a, b) => {
+        const da = a.paymentDate || '9999-99-99';
+        const db = b.paymentDate || '9999-99-99';
+        return da.localeCompare(db);
+      });
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImageElement(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('無法讀取這張圖片，請改存成 JPG 或 PNG'));
+        img.src = src;
+      });
+    }
+
+    // DeepSeek rejects any side longer than 8192px, then shrinks each picture
+    // toward about 1300px and small receipt text disappears. Keep every strip
+    // near that size, with a short overlap so a cut line is still readable.
+    async function imageToJpegSlices(file) {
+      const dataUrl = await fileToDataUrl(file);
+      const img = await loadImageElement(dataUrl);
+      const maxWidth = 1200;
+      const sliceHeight = 1300;
+      const overlap = 180;
+      const scale = Math.min(1, maxWidth / Math.max(img.width, 1));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const slices = [];
+      let y = 0;
+      while (y < height) {
+        const partHeight = Math.min(sliceHeight, height - y);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = partHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, partHeight);
+        ctx.drawImage(img, 0, y / scale, img.width, partHeight / scale, 0, 0, width, partHeight);
+        slices.push(canvas.toDataURL('image/jpeg', 0.9).split(',')[1]);
+        if (y + partHeight >= height) break;
+        y += sliceHeight - overlap;
+      }
+      return { previewUrl: dataUrl, slices };
+    }
+
+    function mergeExtractions(parts) {
+      const merged = {
+        storeName: '',
+        paymentDate: '',
+        receiptDate: '',
+        actualPaidMop: 0,
+        paymentNote: '(整單實付)',
+        items: []
+      };
+      const seen = new Set();
+      parts.forEach(part => {
+        if (!part) return;
+        if (!merged.storeName && part.storeName) merged.storeName = part.storeName;
+        if (!merged.paymentDate && part.paymentDate) merged.paymentDate = part.paymentDate;
+        if (!merged.receiptDate && part.receiptDate) merged.receiptDate = part.receiptDate;
+        const paid = Number(part.actualPaidMop) || 0;
+        if (paid > merged.actualPaidMop) {
+          merged.actualPaidMop = paid;
+          if (part.paymentNote) merged.paymentNote = part.paymentNote;
+        }
+        (part.items || []).forEach(item => {
+          const name = (item.name || '').trim();
+          if (!name) return;
+          const key = `${name}|${Number(item.unitPriceRmb) || 0}|${Number(item.quantity) || 0}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          merged.items.push(item);
+        });
+      });
+      return merged;
+    }
+
+    function imageKind(file) {
+      const name = (file.name || '').toLowerCase();
+      if (/\.(heic|heif)$/.test(name) || file.type === 'image/heic' || file.type === 'image/heif') return 'heic';
+      if ((file.type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif)$/.test(name)) return 'ok';
+      return 'no';
+    }
+
+    function parseOrderJson(text) {
+      const raw = String(text || '').trim();
+      if (!raw) throw new Error('Empty model response');
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (!match) throw e;
+        return JSON.parse(match[0]);
+      }
+    }
+
+    // DeepSeek vision extraction with exponential backoff
+    async function extractOrderFromImage(base64Data, mimeType) {
+      const promptText = `你是一個專業的財務報銷單據數據提取助手。請分析這張淘寶或電商訂單詳情截圖。它可能只是一張長截圖的其中一段。只輸出一個 JSON 物件，不要加說明或 markdown。只填畫面上清楚看得到的內容；看不到的日期留空字串，看不到的實付款填 0，不要猜測。
+要求：
+1. 所有文字（特別是店鋪名稱、項目名稱、規格、備註說明）必須轉換為【繁體中文】。
+2. 項目名稱格式請簡潔清晰，若有規格（如 4.5天然竹筷獨立包裝500雙、分析純AR 100g 等），請用全形括號附在項目名稱後方，例如：「一次性筷子飯店批發專用竹筷（4.5天然竹筷獨立包裝500雙）」。
+3. paymentDate：提取「付款時間」的日期（格式 YYYY-MM-DD）。若無付款時間則用創建時間。
+4. receiptDate：提取「成交時間」或「確認收貨」的日期（格式 YYYY-MM-DD）。若尚未成交則留空字串 ""。
+5. actualPaidMop：提取「實付款」的 MOP 數值（純數字，例如 115.63）。若截圖僅顯示人民幣實付款，請填寫該數值。
+6. paymentNote：根據「付款詳情」生成簡短備註，例如若有店鋪優惠 -¥20.00，填寫 "(整單實付，含店鋪優惠 -¥20.00)"；若有運費 ¥11.00，填寫 "(整單實付，含運費 ¥11.00)"；若無優惠也無運費，填寫 "(整單實付)"。
+7. items：列出該訂單中的所有商品，包含繁體中文名稱 (name)、數量 (quantity，整數)、實付/折後單價 (unitPriceRmb，純數字)。
+JSON 欄位：storeName, paymentDate, receiptDate, actualPaidMop, paymentNote, items。`;
+
+      const payload = {
+        model: DEEPSEEK_VISION_MODEL,
+        thinking: { type: 'disabled' },
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: promptText },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType || 'image/jpeg'};base64,${base64Data}`,
+                  detail: 'high'
+                }
+              }
+            ]
+          }
+        ]
+      };
+
+      const delays = [1000, 2000, 4000, 8000];
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        try {
+          const response = await fetch(deepseekApiUrl(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const errBody = await response.json().catch(() => ({}));
+            const error = new Error(errBody.error?.message || `HTTP ${response.status}`);
+            error.status = response.status;
+            throw error;
+          }
+
+          const result = await response.json();
+          const jsonText = result?.choices?.[0]?.message?.content;
+          return parseOrderJson(jsonText);
+        } catch (err) {
+          const status = err.status;
+          const retry = !status || status === 429 || status >= 500;
+          if (!retry || attempt === delays.length) {
+            throw err;
+          }
+          await new Promise(res => setTimeout(res, delays[attempt]));
+        }
+      }
+    }
+
+    // Handle Multiple File Uploads
+    async function handleFiles(fileList) {
+      const incoming = Array.from(fileList);
+      const files = incoming.filter(file => imageKind(file) === 'ok');
+      const heic = incoming.filter(file => imageKind(file) === 'heic');
+      if (heic.length) {
+        showToast('手機 HEIC 相片無法辨識，請先改存成 JPG 或 PNG', 'error');
+      }
+      if (files.length === 0) {
+        if (!heic.length) showToast('請選擇有效的圖片檔案 (PNG/JPG/WEBP)', 'error');
+        return;
+      }
+
+      queueStatus.classList.remove('hidden');
+      let completed = 0;
+      let imported = 0;
+      queueProgressBadge.textContent = `0 / ${files.length}`;
+
+      for (const file of files) {
+        queueStatusText.textContent = `正在解析截圖：${file.name}...`;
+        try {
+          const { previewUrl, slices } = await imageToJpegSlices(file);
+          const parts = [];
+          for (let i = 0; i < slices.length; i++) {
+            if (slices.length > 1) {
+              queueStatusText.textContent = `正在解析 ${file.name}（${i + 1} / ${slices.length}）...`;
+            }
+            parts.push(await extractOrderFromImage(slices[i], 'image/jpeg'));
+          }
+          const extracted = mergeExtractions(parts);
+
+          const newOrder = {
+            id: uid(),
+            storeName: extracted.storeName || '未知店鋪',
+            paymentDate: extracted.paymentDate || '',
+            receiptDate: extracted.receiptDate || '',
+            actualPaidMop: Number(extracted.actualPaidMop) || 0,
+            paymentNote: extracted.paymentNote || '(整單實付)',
+            imageUrl: previewUrl,
+            fileName: file.name,
+            items: (extracted.items && extracted.items.length > 0)
+              ? extracted.items.map(it => ({
+                  id: uid(),
+                  name: it.name || '未命名商品',
+                  quantity: Number(it.quantity) || 1,
+                  unitPriceRmb: Number(it.unitPriceRmb) || 0
+                }))
+              : [{ id: uid(), name: '請手動輸入項目名稱', quantity: 1, unitPriceRmb: 0 }]
+          };
+
+          orders.push(newOrder);
+          imported++;
+          if (sortByDateCheckbox.checked) {
+            sortOrdersByDate();
+          }
+          renderAll();
+        } catch (error) {
+          const offline = /Failed to fetch|NetworkError|Load failed/i.test(error.message || '') || error.status === 405 || error.status === 404;
+          const message = offline
+            ? '連不到實驗室伺服器。請先執行 python serve.py，再用 http://127.0.0.1:8765/reimbursement.html 開啟。'
+            : (error.message || '無法解析這張截圖');
+          showToast(`${file.name}：${message}`, 'error');
+        } finally {
+          completed++;
+          queueProgressBadge.textContent = `${completed} / ${files.length}`;
+        }
+      }
+
+      queueStatusText.textContent = imported ? '截圖解析完成' : '截圖未能解析';
+      if (imported) showToast(`成功匯入 ${imported} 張訂單截圖`, 'success');
+      setTimeout(() => {
+        queueStatus.classList.add('hidden');
+      }, 1500);
+      fileInput.value = '';
+    }
+
+    // Drag and drop listeners
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+      if (e.dataTransfer?.files) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+
+    // Render Receipt Cards (Thumbnails + Quick Actions)
+    function renderReceiptCards() {
+      if (orders.length === 0) {
+        receiptsSection.classList.add('hidden');
+        return;
+      }
+
+      receiptsSection.classList.remove('hidden');
+      orderCountLabel.textContent = orders.length;
+      receiptCardsContainer.innerHTML = '';
+
+      orders.forEach((order, idx) => {
+        const code = getOrderCode(idx);
+        const card = document.createElement('div');
+        card.className = 'bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm flex gap-3 items-start hover:border-blue-300 transition';
+
+        const thumbHtml = order.imageUrl
+          ? `<button type="button" onclick="openImageModal('${order.id}')" class="w-16 h-20 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0 relative group bg-slate-100">
+               <img src="${order.imageUrl}" alt="${code}" class="w-full h-full object-cover" />
+               <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-medium transition">放大</div>
+             </button>`
+          : `<div class="w-16 h-20 rounded-lg border border-dashed border-slate-300 flex-shrink-0 flex flex-col items-center justify-center text-slate-400 bg-slate-50 text-[10px] text-center p-1">
+               <span>手動建立</span>
+             </div>`;
+
+        card.innerHTML = `
+          ${thumbHtml}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${code}</span>
+              <div class="flex items-center gap-1">
+                <button type="button" onclick="moveOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="上移" class="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30">▲</button>
+                <button type="button" onclick="moveOrder(${idx}, 1)" ${idx === orders.length - 1 ? 'disabled' : ''} title="下移" class="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30">▼</button>
+                <button type="button" onclick="deleteOrder('${order.id}')" title="刪除此訂單" class="p-1 text-rose-400 hover:text-rose-600">✕</button>
+              </div>
+            </div>
+            <p class="text-xs font-semibold text-slate-800 truncate mt-1">${escapeHtml(order.storeName)}</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">付款: ${order.paymentDate || '-'} ｜ 收貨: ${order.receiptDate || '-'}</p>
+            <div class="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100">
+              <span class="text-xs font-bold text-slate-900">MOP ${order.actualPaidMop.toFixed(2)}</span>
+              <button type="button" onclick="addItemToOrder('${order.id}')" class="text-[11px] font-medium text-blue-600 hover:text-blue-800">+ 新增項目</button>
+            </div>
+          </div>
+        `;
+        receiptCardsContainer.appendChild(card);
+      });
+    }
+
+    // Render Main Table & Markdown Output
+    function renderAll() {
+      renderReceiptCards();
+
+      if (orders.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="9" class="py-12 text-center text-slate-400">
+              <div class="flex flex-col items-center justify-center gap-2">
+                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <p class="text-sm font-medium text-slate-500">尚未有任何訂單資料</p>
+                <p class="text-xs text-slate-400">請在上方拖曳上傳訂單截圖，或點擊右上角「載入範例數據」測試</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        tableFooter.classList.add('hidden');
+        markdownRawPreview.textContent = '尚未生成資料...';
+        return;
+      }
+
+      tableFooter.classList.remove('hidden');
+      tableBody.innerHTML = '';
+
+      let totalQty = 0;
+      let totalRmb = 0;
+      let totalMop = 0;
+      let totalItemsCount = 0;
+
+      // Markdown lines array
+      const mdLines = [
+        '| 編號 | 付款日期 | 收貨日期 (成交時間) | 項目名稱 | 數量 | 單價 (RMB) | 小計 (RMB) | 訂單實付款 (MOP) |',
+        '| :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: |'
+      ];
+
+      orders.forEach((order, orderIndex) => {
+        const orderCode = getOrderCode(orderIndex);
+        totalMop += Number(order.actualPaidMop) || 0;
+
+        order.items.forEach((item, itemIndex) => {
+          const isFirst = itemIndex === 0;
+          const qty = Number(item.quantity) || 0;
+          const unitPrice = Number(item.unitPriceRmb) || 0;
+          const subtotal = qty * unitPrice;
+
+          totalQty += qty;
+          totalRmb += subtotal;
+          totalItemsCount++;
+
+          const tr = document.createElement('tr');
+          tr.className = isFirst
+            ? 'bg-white hover:bg-slate-50/80 border-t-2 border-slate-200'
+            : 'bg-slate-50/30 hover:bg-slate-50/80';
+
+          // Build HTML Row
+          const codeCellHtml = isFirst
+            ? `<span class="font-mono font-semibold text-blue-700">${escapeHtml(orderCode)}</span>`
+            : `<span class="italic text-slate-400 text-xs">(同上)</span>`;
+
+          const payDateCellHtml = isFirst
+            ? `<span contenteditable="true" onblur="updateOrderField('${order.id}', 'paymentDate', this.textContent)" class="px-1 py-0.5 font-mono text-xs text-slate-700">${escapeHtml(order.paymentDate)}</span>`
+            : `<span class="italic text-slate-400 text-xs">(同上)</span>`;
+
+          const recDateCellHtml = isFirst
+            ? `<span contenteditable="true" onblur="updateOrderField('${order.id}', 'receiptDate', this.textContent)" class="px-1 py-0.5 font-mono text-xs text-slate-700">${escapeHtml(order.receiptDate)}</span>`
+            : `<span class="italic text-slate-400 text-xs">(同上)</span>`;
+
+          const mopCellHtml = isFirst
+            ? `<div class="flex flex-col items-end">
+                 <div>
+                   <span class="font-bold text-slate-900">MOP </span>
+                   <span contenteditable="true" onblur="updateOrderNumberField('${order.id}', 'actualPaidMop', this.textContent)" class="font-bold text-slate-900 font-mono px-1">${order.actualPaidMop.toFixed(2)}</span>
+                 </div>
+                 <span contenteditable="true" onblur="updateOrderField('${order.id}', 'paymentNote', this.textContent)" class="text-[11px] italic text-slate-500 px-1 mt-0.5">${escapeHtml(order.paymentNote)}</span>
+               </div>`
+            : `<span class="italic text-slate-400 text-xs">(同上)</span>`;
+
+          tr.innerHTML = `
+            <td class="py-2.5 px-3.5 whitespace-nowrap">${codeCellHtml}</td>
+            <td class="py-2.5 px-3.5 whitespace-nowrap">${payDateCellHtml}</td>
+            <td class="py-2.5 px-3.5 whitespace-nowrap">${recDateCellHtml}</td>
+            <td class="py-2.5 px-3.5">
+              <div contenteditable="true" onblur="updateItemField('${order.id}', '${item.id}', 'name', this.textContent)" class="text-slate-800 leading-snug px-1 py-0.5">${escapeHtml(item.name)}</div>
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              <span contenteditable="true" onblur="updateItemNumberField('${order.id}', '${item.id}', 'quantity', this.textContent)" class="font-mono px-1.5 py-0.5">${qty}</span>
+            </td>
+            <td class="py-2.5 px-3.5 text-right whitespace-nowrap font-mono text-slate-700">
+              ¥<span contenteditable="true" onblur="updateItemNumberField('${order.id}', '${item.id}', 'unitPriceRmb', this.textContent)" class="px-1 py-0.5">${unitPrice.toFixed(2)}</span>
+            </td>
+            <td class="py-2.5 px-3.5 text-right whitespace-nowrap font-mono font-medium text-slate-900">
+              ¥${subtotal.toFixed(2)}
+            </td>
+            <td class="py-2.5 px-3.5 text-right whitespace-nowrap">${mopCellHtml}</td>
+            <td class="py-2.5 px-2 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-1">
+                <button type="button" onclick="addItemToOrder('${order.id}')" title="在此訂單新增一項" class="p-1 rounded text-blue-600 hover:bg-blue-50 text-xs font-bold">+</button>
+                <button type="button" onclick="deleteItem('${order.id}', '${item.id}')" title="刪除此項目" class="p-1 rounded text-rose-500 hover:bg-rose-50 text-xs">✕</button>
+              </div>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+
+          // Build Markdown Row
+          const mdCode = isFirst ? orderCode : '*(同上)*';
+          const mdPayDate = isFirst ? order.paymentDate : '*(同上)*';
+          const mdRecDate = isFirst ? order.receiptDate : '*(同上)*';
+          const mdNote = order.paymentNote ? ` *${order.paymentNote}*` : '';
+          const mdMop = isFirst ? `**MOP ${order.actualPaidMop.toFixed(2)}**${mdNote}` : '*(同上)*';
+
+          mdLines.push(
+            `| ${mdCode} | ${mdPayDate} | ${mdRecDate} | ${item.name.replace(/\|/g, '｜')} | ${qty} | ¥${unitPrice.toFixed(2)} | ¥${subtotal.toFixed(2)} | ${mdMop} |`
+          );
+        });
+      });
+
+      // Add Footer Summary Row to Markdown
+      mdLines.push(`| **總計** | | | | | | **¥${totalRmb.toFixed(2)}** | **MOP ${totalMop.toFixed(2)}** |`);
+
+      // Update Footer DOM
+      footerSummaryCount.textContent = `共 ${orders.length} 筆訂單，${totalItemsCount} 項商品`;
+      footerTotalQty.textContent = totalQty;
+      footerTotalRmb.textContent = `¥${totalRmb.toFixed(2)}`;
+      footerTotalMop.textContent = `MOP ${totalMop.toFixed(2)}`;
+
+      // Update Raw Markdown Preview
+      markdownRawPreview.textContent = mdLines.join('\n');
+
+      if (!reportModal.classList.contains('hidden')) {
+        renderReportPreview();
+      }
+    }
+
+    function renderReportPreview() {
+      const reportTitle = (reportTitleInput.value || '浸中科學實驗室採購報銷明細及憑證報告').trim();
+      const applicant = (reportApplicantInput.value || '').trim();
+      const reportDate = (reportDateInput.value || new Date().toISOString().split('T')[0]).trim();
+
+      let totalQty = 0;
+      let totalRmb = 0;
+      let totalMop = 0;
+      let tableRowsHtml = '';
+
+      orders.forEach((order, orderIndex) => {
+        const orderCode = getOrderCode(orderIndex);
+        const paid = Number(order.actualPaidMop) || 0;
+        totalMop += paid;
+        order.items.forEach((item, itemIndex) => {
+          const isFirst = itemIndex === 0;
+          const qty = Number(item.quantity) || 0;
+          const unitPrice = Number(item.unitPriceRmb) || 0;
+          const subtotal = qty * unitPrice;
+          totalQty += qty;
+          totalRmb += subtotal;
+          const rowBorderClass = isFirst ? 'border-t-2 border-slate-300' : 'border-t border-slate-200';
+          tableRowsHtml += `
+            <tr class="${rowBorderClass} text-xs">
+              <td class="py-2 px-2.5 font-mono font-bold ${isFirst ? 'text-blue-700' : 'text-slate-400 italic font-normal'} whitespace-nowrap">${isFirst ? escapeHtml(orderCode) : '(同上)'}</td>
+              <td class="py-2 px-2.5 font-mono ${isFirst ? 'text-slate-700' : 'text-slate-400 italic'} whitespace-nowrap">${isFirst ? escapeHtml(order.paymentDate || '-') : '(同上)'}</td>
+              <td class="py-2 px-2.5 font-mono ${isFirst ? 'text-slate-700' : 'text-slate-400 italic'} whitespace-nowrap">${isFirst ? escapeHtml(order.receiptDate || '-') : '(同上)'}</td>
+              <td class="py-2 px-2.5 text-slate-800 leading-snug">${escapeHtml(item.name)}</td>
+              <td class="py-2 px-2 text-center font-mono text-slate-800 whitespace-nowrap">${qty}</td>
+              <td class="py-2 px-2.5 text-right font-mono text-slate-700 whitespace-nowrap">¥${unitPrice.toFixed(2)}</td>
+              <td class="py-2 px-2.5 text-right font-mono font-medium text-slate-900 whitespace-nowrap">¥${subtotal.toFixed(2)}</td>
+              <td class="py-2 px-2.5 text-right whitespace-nowrap">${isFirst
+                ? `<div class="font-bold font-mono text-slate-900">MOP ${paid.toFixed(2)}</div><div class="text-[10px] italic text-slate-500">${escapeHtml(order.paymentNote || '')}</div>`
+                : '<span class="text-slate-400 italic">(同上)</span>'}</td>
+            </tr>`;
+        });
+      });
+
+      const gridClass = reportGridCols === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2';
+      let receiptsGridHtml = '';
+      orders.forEach((order, orderIndex) => {
+        const orderCode = getOrderCode(orderIndex);
+        const paid = Number(order.actualPaidMop) || 0;
+        const imgContent = order.imageUrl
+          ? `<img src="${order.imageUrl}" alt="${escapeHtml(orderCode)}" class="w-full h-auto max-h-[540px] object-contain mx-auto rounded-lg border border-slate-200 bg-white" />`
+          : `<div class="h-44 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400 text-xs p-4 text-center">此訂單未附帶截圖憑證</div>`;
+        receiptsGridHtml += `
+          <div class="receipt-print-card border border-slate-300 rounded-xl overflow-hidden bg-slate-50/60 flex flex-col">
+            <div class="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="bg-blue-500 text-white font-mono text-xs font-bold px-2.5 py-0.5 rounded tracking-wide">編號：${escapeHtml(orderCode)}</span>
+                <span class="text-xs font-medium text-slate-200 truncate max-w-[180px]">${escapeHtml(order.storeName || '')}</span>
+              </div>
+              <span class="font-mono text-xs font-bold text-amber-300 whitespace-nowrap">MOP ${paid.toFixed(2)}</span>
+            </div>
+            <div class="bg-slate-100 border-b border-slate-200 px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+              <span>付款日期：<strong class="font-mono text-slate-800">${escapeHtml(order.paymentDate || '-')}</strong></span>
+              <span>收貨日期：<strong class="font-mono text-slate-800">${escapeHtml(order.receiptDate || '-')}</strong></span>
+            </div>
+            <div class="p-3 flex-1 flex items-center justify-center bg-white">${imgContent}</div>
+            <div class="bg-slate-50 border-t border-slate-200 px-4 py-1.5 text-[11px] text-slate-500 flex items-center justify-between">
+              <span>對應項目數：${order.items.length} 項</span>
+              <span class="italic">${escapeHtml(order.paymentNote || '')}</span>
+            </div>
+          </div>`;
+      });
+
+      printableReportSheet.innerHTML = `
+        <div class="border-b-2 border-slate-900 pb-5 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-widest text-blue-600 mb-1">EXPENSE REIMBURSEMENT REPORT</div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">${escapeHtml(reportTitle)}</h1>
+          </div>
+          <div class="text-xs text-slate-600 space-y-1 sm:text-right">
+            ${applicant ? `<div>申請人／部門：<span class="font-semibold text-slate-900">${escapeHtml(applicant)}</span></div>` : ''}
+            <div>報告日期：<span class="font-mono font-semibold text-slate-900">${escapeHtml(reportDate)}</span></div>
+            <div>訂單總數：<span class="font-semibold text-slate-900">${orders.length} 筆</span> ｜ 實付總額：<span class="font-mono font-bold text-blue-700">MOP ${totalMop.toFixed(2)}</span></div>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-900">一、採購報銷明細表</h2>
+            <span class="text-[11px] text-slate-500">貨幣單位：人民幣 (RMB) / 澳門元 (MOP)</span>
+          </div>
+          <div class="overflow-x-auto border border-slate-300 rounded-lg">
+            <table class="w-full min-w-[880px] text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100 border-b border-slate-300 text-[11px] font-bold text-slate-800">
+                  <th class="py-2.5 px-2.5 whitespace-nowrap">編號</th>
+                  <th class="py-2.5 px-2.5 whitespace-nowrap">付款日期</th>
+                  <th class="py-2.5 px-2.5 whitespace-nowrap">收貨日期</th>
+                  <th class="py-2.5 px-2.5">項目名稱</th>
+                  <th class="py-2.5 px-2 text-center whitespace-nowrap">數量</th>
+                  <th class="py-2.5 px-2.5 text-right whitespace-nowrap">單價 (RMB)</th>
+                  <th class="py-2.5 px-2.5 text-right whitespace-nowrap">小計 (RMB)</th>
+                  <th class="py-2.5 px-2.5 text-right whitespace-nowrap">訂單實付款 (MOP)</th>
+                </tr>
+              </thead>
+              <tbody>${tableRowsHtml}</tbody>
+              <tfoot>
+                <tr class="bg-slate-100 border-t-2 border-slate-400 font-bold text-xs text-slate-900">
+                  <td class="py-2.5 px-2.5">總計</td>
+                  <td></td><td></td>
+                  <td class="py-2.5 px-2.5 text-[11px] font-normal text-slate-600">共 ${orders.length} 筆訂單</td>
+                  <td class="py-2.5 px-2 text-center font-mono">${totalQty}</td>
+                  <td></td>
+                  <td class="py-2.5 px-2.5 text-right font-mono">¥${totalRmb.toFixed(2)}</td>
+                  <td class="py-2.5 px-2.5 text-right font-mono text-blue-700 text-sm">MOP ${totalMop.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="space-y-4 pt-2">
+          <h2 class="text-sm font-bold text-slate-900">二、採購憑證附圖對照 (按訂單編號排列)</h2>
+          <div class="grid ${gridClass} gap-5">${receiptsGridHtml}</div>
+        </div>
+        <div class="pt-6 border-t border-slate-200 grid grid-cols-3 gap-6 text-xs text-slate-600">
+          <div><p class="mb-6">申請人簽署：</p><div class="border-b border-slate-400 w-4/5"></div></div>
+          <div><p class="mb-6">部門主管審核：</p><div class="border-b border-slate-400 w-4/5"></div></div>
+          <div><p class="mb-6">財務核准：</p><div class="border-b border-slate-400 w-4/5"></div></div>
+        </div>`;
+    }
+
+    function openReportModal() {
+      if (orders.length === 0) {
+        showToast('請先上傳訂單截圖或載入範例數據，再生成報告！', 'error');
+        return;
+      }
+      renderReportPreview();
+      reportModal.classList.remove('hidden');
+    }
+
+    document.getElementById('openReportBtn').addEventListener('click', openReportModal);
+    document.getElementById('openReportBtnSecondary').addEventListener('click', openReportModal);
+    document.getElementById('closeReportModalBtn').addEventListener('click', () => {
+      reportModal.classList.add('hidden');
+    });
+    reportTitleInput.addEventListener('input', renderReportPreview);
+    reportApplicantInput.addEventListener('input', renderReportPreview);
+    reportDateInput.addEventListener('change', renderReportPreview);
+    gridCols1Btn.addEventListener('click', () => {
+      reportGridCols = 1;
+      gridCols1Btn.className = 'px-2.5 py-1 rounded-md font-semibold bg-white text-blue-700 shadow-sm transition';
+      gridCols2Btn.className = 'px-2.5 py-1 rounded-md font-medium text-slate-600 hover:text-slate-900 transition';
+      renderReportPreview();
+    });
+    gridCols2Btn.addEventListener('click', () => {
+      reportGridCols = 2;
+      gridCols2Btn.className = 'px-2.5 py-1 rounded-md font-semibold bg-white text-blue-700 shadow-sm transition';
+      gridCols1Btn.className = 'px-2.5 py-1 rounded-md font-medium text-slate-600 hover:text-slate-900 transition';
+      renderReportPreview();
+    });
+    document.getElementById('printReportBtn').addEventListener('click', () => {
+      window.print();
+    });
+    document.getElementById('downloadHtmlReportBtn').addEventListener('click', () => {
+      const reportTitle = (reportTitleInput.value || '浸中科學實驗室採購報銷明細及憑證報告').trim();
+      const prefix = (prefixInput.value || 'TB2627').trim();
+      const dateStr = reportDateInput.value || new Date().toISOString().slice(0, 10);
+      const reportBodyHtml = printableReportSheet.innerHTML;
+      const standaloneHtml = `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(reportTitle)}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    body { font-family: "Noto Sans TC", sans-serif; }
+    @media print {
+      body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .no-print { display: none !important; }
+      .receipt-print-card { break-inside: avoid !important; page-break-inside: avoid !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 py-8 px-4">
+  <div class="no-print max-w-4xl mx-auto mb-4 flex justify-end">
+    <button onclick="window.print()" class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl">列印 / 另存為 PDF</button>
+  </div>
+  <div class="bg-white max-w-4xl mx-auto p-6 sm:p-10 rounded-xl shadow-md border border-slate-200 space-y-8">
+    ${reportBodyHtml}
+  </div>
+</body>
+</html>`;
+      const blob = new Blob([standaloneHtml], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${reportTitle}_${prefix}_${dateStr}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('已下載獨立 HTML 報告檔（內含全部憑證圖片）！', 'success');
+    });
+
+    // Inline Editing Handlers
+    window.updateOrderField = function(orderId, field, value) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        order[field] = value.trim();
+        if (field === 'paymentDate' && sortByDateCheckbox.checked) {
+          sortOrdersByDate();
+        }
+        renderAll();
+      }
+    };
+
+    window.updateOrderNumberField = function(orderId, field, value) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        const parsed = parseFloat(value.replace(/[^\d.-]/g, ''));
+        order[field] = isNaN(parsed) ? 0 : parsed;
+        renderAll();
+      }
+    };
+
+    window.updateItemField = function(orderId, itemId, field, value) {
+      const order = orders.find(o => o.id === orderId);
+      const item = order?.items.find(i => i.id === itemId);
+      if (item) {
+        item[field] = value.trim();
+        renderAll();
+      }
+    };
+
+    window.updateItemNumberField = function(orderId, itemId, field, value) {
+      const order = orders.find(o => o.id === orderId);
+      const item = order?.items.find(i => i.id === itemId);
+      if (item) {
+        const parsed = parseFloat(value.replace(/[^\d.-]/g, ''));
+        item[field] = isNaN(parsed) ? 0 : parsed;
+        renderAll();
+      }
+    };
+
+    window.addItemToOrder = function(orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        order.items.push({
+          id: uid(),
+          name: '新項目名稱（點擊編輯）',
+          quantity: 1,
+          unitPriceRmb: 0
+        });
+        renderAll();
+      }
+    };
+
+    window.deleteItem = function(orderId, itemId) {
+      const orderIndex = orders.findIndex(o => o.id === orderId);
+      if (orderIndex === -1) return;
+      const order = orders[orderIndex];
+      order.items = order.items.filter(i => i.id !== itemId);
+      if (order.items.length === 0) {
+        orders.splice(orderIndex, 1);
+      }
+      renderAll();
+    };
+
+    window.deleteOrder = function(orderId) {
+      orders = orders.filter(o => o.id !== orderId);
+      renderAll();
+      showToast('已刪除該筆訂單', 'info');
+    };
+
+    window.moveOrder = function(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= orders.length) return;
+      sortByDateCheckbox.checked = false;
+      const temp = orders[index];
+      orders[index] = orders[newIndex];
+      orders[newIndex] = temp;
+      renderAll();
+    };
+
+    // Modal Preview
+    window.openImageModal = function(orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (!order || !order.imageUrl) return;
+      modalImageEl.src = order.imageUrl;
+      modalImageTitle.textContent = `${order.storeName} (${order.fileName})`;
+      imageModal.classList.remove('hidden');
+    };
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      imageModal.classList.add('hidden');
+    });
+
+    imageModal.addEventListener('click', (e) => {
+      if (e.target === imageModal) {
+        imageModal.classList.add('hidden');
+      }
+    });
+
+    // Add Manual Order Button
+    document.getElementById('addManualOrderBtn').addEventListener('click', () => {
+      const today = new Date().toISOString().split('T')[0];
+      orders.push({
+        id: uid(),
+        storeName: '手動新增店鋪',
+        paymentDate: today,
+        receiptDate: today,
+        actualPaidMop: 0,
+        paymentNote: '(整單實付)',
+        imageUrl: null,
+        fileName: '手動建立',
+        items: [
+          { id: uid(), name: '請輸入項目名稱', quantity: 1, unitPriceRmb: 0 }
+        ]
+      });
+      renderAll();
+      showToast('已新增空白訂單列', 'success');
+    });
+
+    // Load Sample Data Button (Matching user's exact example)
+    function loadSampleOrders() {
+      orders = [
+        {
+          id: uid(),
+          storeName: '淘寶 — 安娜塑業',
+          paymentDate: '2026-09-15',
+          receiptDate: '2026-09-26',
+          actualPaidMop: 115.63,
+          paymentNote: '(整單實付，含店鋪優惠 -¥20.00)',
+          imageUrl: null,
+          fileName: '範例截圖 1',
+          items: [
+            { id: uid(), name: '一次性筷子飯店批發專用竹筷（4.5天然竹筷獨立包裝500雙）', quantity: 1, unitPriceRmb: 18.00 },
+            { id: uid(), name: '一次性筷子飯店批發專用竹筷（5.0天然竹筷獨立包裝500雙）', quantity: 1, unitPriceRmb: 17.00 },
+            { id: uid(), name: '一次性筷子飯店批發專用竹筷（5.5天然竹筷獨立包裝500雙）', quantity: 1, unitPriceRmb: 25.00 },
+            { id: uid(), name: '一次性筷子飯店批發專用竹筷（4.5天然竹筷獨立包裝1000雙）', quantity: 1, unitPriceRmb: 35.00 }
+          ]
+        },
+        {
+          id: uid(),
+          storeName: '淘寶 — 順通化學小店',
+          paymentDate: '2026-09-16',
+          receiptDate: '2026-09-27',
+          actualPaidMop: 143.02,
+          paymentNote: '(整單實付，含運費 ¥11.00)',
+          imageUrl: null,
+          fileName: '範例截圖 2',
+          items: [
+            { id: uid(), name: '銅片（分析純 AR 100g 化學試劑紫銅片 學生化學實驗專用）', quantity: 2, unitPriceRmb: 16.00 },
+            { id: uid(), name: '銅絲（100g 教學科研實驗用學生試劑銅絲 金屬單質 Cu）', quantity: 3, unitPriceRmb: 16.50 },
+            { id: uid(), name: '大理石／碳酸鈣（申泰 AR 分析純 500g 學校教學耗材）', quantity: 1, unitPriceRmb: 7.00 },
+            { id: uid(), name: '銀色鐵絲（100g 學生實驗用 中學考試用 鐵絲）', quantity: 3, unitPriceRmb: 6.00 }
+          ]
+        }
+      ];
+      renderAll();
+      showToast('已載入範例報銷數據', 'success');
+    }
+    document.getElementById('loadSampleBtn').addEventListener('click', loadSampleOrders);
+
+    // Clear All Button
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      orders = [];
+      renderAll();
+      showToast('已清空所有資料', 'info');
+    });
+
+    // Clipboard Copy Helper using execCommand fallback for iframe reliability
+    function copyTextToClipboard(text, successMsg) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg, 'success');
+      } catch (err) {
+        showToast('複製失敗，請手動選取複製', 'error');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // Copy Markdown Table
+    document.getElementById('copyMarkdownBtn').addEventListener('click', () => {
+      if (orders.length === 0) {
+        showToast('目前沒有可複製的資料', 'error');
+        return;
+      }
+      copyTextToClipboard(markdownRawPreview.textContent, '已複製 Markdown 表格至剪貼簿！');
+    });
+
+    // Copy TSV for Direct Excel / Google Sheets Paste
+    document.getElementById('copyTsvBtn').addEventListener('click', () => {
+      if (orders.length === 0) {
+        showToast('目前沒有可複製的資料', 'error');
+        return;
+      }
+
+      const rows = [
+        ['編號', '付款日期', '收貨日期 (成交時間)', '項目名稱', '數量', '單價 (RMB)', '小計 (RMB)', '訂單實付款 (MOP)']
+      ];
+
+      let totalRmb = 0;
+      let totalMop = 0;
+
+      orders.forEach((order, orderIndex) => {
+        const orderCode = getOrderCode(orderIndex);
+        totalMop += Number(order.actualPaidMop) || 0;
+
+        order.items.forEach((item, itemIndex) => {
+          const isFirst = itemIndex === 0;
+          const qty = Number(item.quantity) || 0;
+          const unitPrice = Number(item.unitPriceRmb) || 0;
+          const subtotal = qty * unitPrice;
+          totalRmb += subtotal;
+
+          rows.push([
+            isFirst ? orderCode : '(同上)',
+            isFirst ? order.paymentDate : '(同上)',
+            isFirst ? order.receiptDate : '(同上)',
+            item.name,
+            qty,
+            `¥${unitPrice.toFixed(2)}`,
+            `¥${subtotal.toFixed(2)}`,
+            isFirst ? `MOP ${order.actualPaidMop.toFixed(2)} ${order.paymentNote}` : '(同上)'
+          ]);
+        });
+      });
+
+      rows.push(['總計', '', '', '', '', '', `¥${totalRmb.toFixed(2)}`, `MOP ${totalMop.toFixed(2)}`]);
+
+      const tsvString = rows.map(r => r.join('\t')).join('\n');
+      copyTextToClipboard(tsvString, '已複製表格，可直接貼上至 Excel 或 Google 試算表！');
+    });
+
+    // Export CSV Download
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      if (orders.length === 0) {
+        showToast('目前沒有可匯出的資料', 'error');
+        return;
+      }
+
+      const rows = [
+        ['編號', '付款日期', '收貨日期 (成交時間)', '項目名稱', '數量', '單價 (RMB)', '小計 (RMB)', '訂單實付款 (MOP)']
+      ];
+
+      let totalRmb = 0;
+      let totalMop = 0;
+
+      orders.forEach((order, orderIndex) => {
+        const orderCode = getOrderCode(orderIndex);
+        totalMop += Number(order.actualPaidMop) || 0;
+
+        order.items.forEach((item, itemIndex) => {
+          const isFirst = itemIndex === 0;
+          const qty = Number(item.quantity) || 0;
+          const unitPrice = Number(item.unitPriceRmb) || 0;
+          const subtotal = qty * unitPrice;
+          totalRmb += subtotal;
+
+          rows.push([
+            isFirst ? orderCode : '(同上)',
+            isFirst ? order.paymentDate : '(同上)',
+            isFirst ? order.receiptDate : '(同上)',
+            item.name,
+            qty,
+            `¥${unitPrice.toFixed(2)}`,
+            `¥${subtotal.toFixed(2)}`,
+            isFirst ? `MOP ${order.actualPaidMop.toFixed(2)} ${order.paymentNote}` : '(同上)'
+          ]);
+        });
+      });
+
+      rows.push(['總計', '', '', '', '', '', `¥${totalRmb.toFixed(2)}`, `MOP ${totalMop.toFixed(2)}`]);
+
+      const csvContent = '\uFEFF' + rows.map(row =>
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const prefix = (prefixInput.value || 'TB2627').trim();
+      link.href = url;
+      link.download = `報銷明細表_${prefix}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('CSV 檔案已匯出下載！', 'success');
+    });
+
+    // Helper: Escape HTML to prevent XSS on editable fields
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
